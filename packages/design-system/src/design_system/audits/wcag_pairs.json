@@ -1,0 +1,69 @@
+{
+  "version": "1.0.0",
+  "description": "Locked colour pairs that must clear their WCAG minimum (SC-005).",
+  "pairs": [
+    {
+      "name": "body_text_on_surface",
+      "foreground": "color.text",
+      "background": "color.surface",
+      "kind": "text",
+      "min_ratio": 7.0
+    },
+    {
+      "name": "body_text_on_background",
+      "foreground": "color.text",
+      "background": "color.background",
+      "kind": "text",
+      "min_ratio": 7.0
+    },
+    {
+      "name": "signal_on_background",
+      "foreground": "color.signal",
+      "background": "color.background",
+      "kind": "text",
+      "min_ratio": 4.5
+    },
+    {
+      "name": "signal_on_surface",
+      "foreground": "color.signal",
+      "background": "color.surface",
+      "kind": "text",
+      "min_ratio": 4.5
+    },
+    {
+      "name": "amber_on_surface",
+      "foreground": "color.amber",
+      "background": "color.surface",
+      "kind": "text",
+      "min_ratio": 4.5
+    },
+    {
+      "name": "muted_on_surface",
+      "foreground": "color.muted",
+      "background": "color.surface",
+      "kind": "text_large",
+      "min_ratio": 3.0
+    },
+    {
+      "name": "muted_on_background",
+      "foreground": "color.muted",
+      "background": "color.background",
+      "kind": "text_large",
+      "min_ratio": 3.0
+    },
+    {
+      "name": "signal_border_on_background",
+      "foreground": "color.signal",
+      "background": "color.background",
+      "kind": "non_text",
+      "min_ratio": 3.0
+    },
+    {
+      "name": "amber_border_on_surface",
+      "foreground": "color.amber",
+      "background": "color.surface",
+      "kind": "non_text",
+      "min_ratio": 3.0
+    }
+  ]
+}

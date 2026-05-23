@@ -66,7 +66,26 @@ jobs:
           uv run pytest -m benchmark \
             packages/analysis-core/benchmarks \
             packages/report-engine/benchmarks \
+            packages/design-system/benchmarks \
             --benchmark-only \
             --benchmark-save=ci \
             --benchmark-fail=min:1.10
+
+  design_system_audits:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.11.5"
+      - run: uv python install 3.11
+      - run: uv sync --all-packages --all-extras
+      - name: Design-system audits (enforced)
+        run: |
+          uv run pytest \
+            packages/design-system/tests/ \
+            -m "audit_palette or audit_typography or audit_motion or audit_lexical" \
+            --no-cov
 

@@ -1,6 +1,6 @@
 [project]
 name = "design-system"
-version = "0.1.0"
+version = "1.0.0"
 description = "Forensic Analytics Design System for Clean Match Chess."
 requires-python = ">=3.11,<3.13"
 dependencies = [

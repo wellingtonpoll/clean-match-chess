@@ -1,0 +1,129 @@
+{
+  "version": "1.0.0",
+  "components": {
+    "analytical-card": {
+      "description": "Large dark surface card carrying a headline metric and supporting copy.",
+      "tokens_of_record": [
+        "color.surface",
+        "color.border",
+        "color.text",
+        "color.muted",
+        "color.signal",
+        "radius.lg",
+        "spacing.4",
+        "spacing.6",
+        "typography.metric",
+        "typography.body",
+        "shadow.card"
+      ],
+      "states": ["default"],
+      "surfaces": ["pdf", "html", "web"],
+      "accessibility": {
+        "min_contrast_text": 7.0,
+        "min_contrast_non_text": 3.0,
+        "keyboard_focusable": false,
+        "aria_role": "region"
+      },
+      "added_in": "1.0.0"
+    },
+    "risk-pill": {
+      "description": "Categorical risk indicator (LOW / MEDIUM / HIGH) with role marker.",
+      "tokens_of_record": [
+        "color.background",
+        "color.surface",
+        "color.muted",
+        "color.amber",
+        "color.signal",
+        "color.border",
+        "radius.sm",
+        "typography.body_medium"
+      ],
+      "states": ["default"],
+      "surfaces": ["pdf", "html", "web"],
+      "accessibility": {
+        "min_contrast_text": 4.5,
+        "min_contrast_non_text": 3.0,
+        "keyboard_focusable": false,
+        "aria_role": "status"
+      },
+      "added_in": "1.0.0"
+    },
+    "timeline": {
+      "description": "Per-ply ribbon with regime markers and complexity heatmap.",
+      "tokens_of_record": [
+        "color.background",
+        "color.surface",
+        "color.signal",
+        "color.amber",
+        "color.muted",
+        "spacing.2",
+        "spacing.4"
+      ],
+      "states": ["default", "hover"],
+      "surfaces": ["html", "web"],
+      "accessibility": {
+        "min_contrast_text": 4.5,
+        "min_contrast_non_text": 3.0,
+        "keyboard_focusable": true,
+        "aria_role": "list"
+      },
+      "added_in": "1.0.0"
+    },
+    "heuristic-badge": {
+      "description": "Signal name + version pill (e.g., engine-correlation@0.1.0).",
+      "tokens_of_record": [
+        "color.surface",
+        "color.muted",
+        "color.text",
+        "radius.sm",
+        "typography.body"
+      ],
+      "states": ["default"],
+      "surfaces": ["pdf", "html", "web"],
+      "accessibility": {
+        "min_contrast_text": 4.5,
+        "min_contrast_non_text": null,
+        "keyboard_focusable": false,
+        "aria_role": "text"
+      },
+      "added_in": "1.0.0"
+    },
+    "manifest-block": {
+      "description": "Tabular block listing reproducibility manifest fields.",
+      "tokens_of_record": [
+        "color.surface",
+        "color.border",
+        "color.text",
+        "color.muted",
+        "spacing.3",
+        "typography.body"
+      ],
+      "states": ["default"],
+      "surfaces": ["pdf", "html", "web"],
+      "accessibility": {
+        "min_contrast_text": 7.0,
+        "min_contrast_non_text": null,
+        "keyboard_focusable": false,
+        "aria_role": "table"
+      },
+      "added_in": "1.0.0"
+    },
+    "code-inline": {
+      "description": "Inline monospace span for hashes, hex values, identifiers.",
+      "tokens_of_record": [
+        "color.surface",
+        "color.text",
+        "typography.body"
+      ],
+      "states": ["default"],
+      "surfaces": ["pdf", "html", "web"],
+      "accessibility": {
+        "min_contrast_text": 4.5,
+        "min_contrast_non_text": null,
+        "keyboard_focusable": false,
+        "aria_role": "text"
+      },
+      "added_in": "1.0.0"
+    }
+  }
+}

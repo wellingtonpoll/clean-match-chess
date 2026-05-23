@@ -1,0 +1,83 @@
+{
+  "language": "pt",
+  "version": "1.0.0",
+  "entries": [
+    {
+      "term": "Sinal Comportamental",
+      "definition": "Métrica computada que descreve o comportamento do jogador em relação à referência de motor sob complexidade equivalente.",
+      "context": "narrative",
+      "alternatives_preferred": ["evidência de correlação com motor", "sinal de complexidade equivalente"],
+      "alternatives_forbidden": ["trapaceiro", "trapaça"]
+    },
+    {
+      "term": "Irregularidade Estatística",
+      "definition": "Medição fora da distribuição esperada para a faixa de rating e fase de partida do jogador.",
+      "context": "narrative",
+      "alternatives_preferred": ["observação atípica", "anomalia distribucional"],
+      "alternatives_forbidden": ["fraude", "fraudador"]
+    },
+    {
+      "term": "Correlação com Complexidade",
+      "definition": "Relação entre a precisão dos lances e a complexidade computacional da posição.",
+      "context": "narrative",
+      "alternatives_preferred": ["pareamento complexidade-precisão"],
+      "alternatives_forbidden": ["culpado"]
+    },
+    {
+      "term": "Pico de Precisão Tática",
+      "definition": "Sequência curta de lances quase-ótimos consecutivos em posições de alta complexidade.",
+      "context": "narrative",
+      "alternatives_preferred": ["janela de pico", "sequência de precisão"],
+      "alternatives_forbidden": ["trapaça confirmada"]
+    },
+    {
+      "term": "Janela de Risco",
+      "definition": "Segmento contíguo de lances onde o escore agregado de suspeita cruza um regime elevado.",
+      "context": "narrative",
+      "alternatives_preferred": ["segmento sinalizado", "regime elevado"],
+      "alternatives_forbidden": ["veredicto"]
+    },
+    {
+      "term": "Confiança Analítica",
+      "definition": "Intervalo de confiança derivado por bootstrap em torno do escore agregado de suspeita.",
+      "context": "narrative",
+      "alternatives_preferred": ["intervalo de confiança", "IC bootstrap"],
+      "alternatives_forbidden": ["condenado"]
+    },
+    {
+      "term": "Regime",
+      "definition": "Fase classificada da partida (abertura, meio-jogo, final) usada para delimitar um sinal.",
+      "context": "metadata",
+      "alternatives_preferred": ["fase"],
+      "alternatives_forbidden": []
+    },
+    {
+      "term": "Referência de Motor",
+      "definition": "Conjunto bloqueado de Stockfish + opções UCI usado para gerar a avaliação comparativa.",
+      "context": "manifest",
+      "alternatives_preferred": ["referência Stockfish"],
+      "alternatives_forbidden": []
+    },
+    {
+      "term": "Estimativa Bootstrap",
+      "definition": "Estatística baseada em reamostragem, acompanhada do próprio intervalo de confiança.",
+      "context": "narrative",
+      "alternatives_preferred": ["estimativa reamostrada"],
+      "alternatives_forbidden": ["acusado"]
+    },
+    {
+      "term": "Garantia de Determinismo",
+      "definition": "Promessa, baseada em opções de motor bloqueadas, de que reexecutar uma auditoria produz artefato bit-idêntico na mesma arquitetura.",
+      "context": "manifest",
+      "alternatives_preferred": ["execução reproduzível"],
+      "alternatives_forbidden": []
+    },
+    {
+      "term": "Manifesto de Reprodutibilidade",
+      "definition": "Registro embutido que lista cada hash de entrada, versão do motor e versão de ferramentas necessárias para re-renderizar o artefato.",
+      "context": "manifest",
+      "alternatives_preferred": ["manifesto embutido"],
+      "alternatives_forbidden": ["criminoso", "perpetrador"]
+    }
+  ]
+}

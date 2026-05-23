@@ -201,26 +201,26 @@ Monorepo (Python uv workspace) — design-system lives at
 
 ### Documentation
 
-- [ ] T070 [P] [US3] Write `packages/design-system/docs/CONTRIBUTING.md` covering: how to add a token (MINOR bump), how to add a component (MINOR), how to extend the lexicon, how to add a forbidden term, how to override motion legitimately
-- [ ] T071 [P] [US3] Write `packages/design-system/docs/COMPONENTS.md` documenting every component in `catalogue.json` with: tokens-of-record table, states, accessibility requirements, surfaces supported, example markup
-- [ ] T072 [P] [US3] Write `packages/design-system/docs/LEXICON.md` rendering the en/pt lexicon as a side-by-side reference table with definitions, preferred alternatives, and forbidden alternatives
-- [ ] T073 [P] [US3] Write `packages/design-system/docs/AUDITS.md` with one section per audit including: scope, how to run, common failure modes, override procedure (where applicable)
-- [ ] T074 [P] [US3] Update `specs/002-design-system/quickstart.md` references in root `README.md` so the discovery path from the repo root is one click
+- [X] T070 [P] [US3] Write `packages/design-system/docs/CONTRIBUTING.md` covering: how to add a token (MINOR bump), how to add a component (MINOR), how to extend the lexicon, how to add a forbidden term, how to override motion legitimately
+- [X] T071 [P] [US3] Write `packages/design-system/docs/COMPONENTS.md` documenting every component in `catalogue.json` with: tokens-of-record table, states, accessibility requirements, surfaces supported, example markup
+- [X] T072 [P] [US3] Write `packages/design-system/docs/LEXICON.md` rendering the en/pt lexicon as a side-by-side reference table with definitions, preferred alternatives, and forbidden alternatives
+- [X] T073 [P] [US3] Write `packages/design-system/docs/AUDITS.md` with one section per audit including: scope, how to run, common failure modes, override procedure (where applicable)
+- [X] T074 [P] [US3] Update `specs/002-design-system/quickstart.md` references in root `README.md` so the discovery path from the repo root is one click
 
 ### Component catalogue completion
 
-- [ ] T075 [P] [US3] Write failing unit tests for each catalogue entry (analytical-card, risk-pill, timeline, heuristic-badge, manifest-block, code-inline) covering tokens-of-record resolution + state list completeness in `packages/design-system/tests/unit/test_catalogue_entries.py`
-- [ ] T076 [US3] Author `packages/design-system/src/design_system/components/catalogue.json` with the v1.0.0 component set (turns T075 green); accessibility requirements per data-model §5
+- [X] T075 [P] [US3] Write failing unit tests for each catalogue entry (analytical-card, risk-pill, timeline, heuristic-badge, manifest-block, code-inline) covering tokens-of-record resolution + state list completeness in `packages/design-system/tests/unit/test_catalogue_entries.py`
+- [X] T076 [US3] Author `packages/design-system/src/design_system/components/catalogue.json` with the v1.0.0 component set (turns T075 green); accessibility requirements per data-model §5
 
 ### Lexicon v1.0.0 entries
 
-- [ ] T077 [P] [US3] Seed `packages/design-system/src/design_system/lexicon/entries_en.json` with the v1.0.0 set: Behavioral Signal, Statistical Irregularity, Complexity Correlation, Tactical Precision Burst, Risk Window, Analytical Confidence + 5 more sourced from spec FR-011
-- [ ] T078 [P] [US3] Seed `packages/design-system/src/design_system/lexicon/entries_pt.json` parallel to T077 with Portuguese definitions
+- [X] T077 [P] [US3] Seed `packages/design-system/src/design_system/lexicon/entries_en.json` with the v1.0.0 set: Behavioral Signal, Statistical Irregularity, Complexity Correlation, Tactical Precision Burst, Risk Window, Analytical Confidence + 5 more sourced from spec FR-011
+- [X] T078 [P] [US3] Seed `packages/design-system/src/design_system/lexicon/entries_pt.json` parallel to T077 with Portuguese definitions
 
 ### Audit replay CLI end-to-end
 
-- [ ] T079 [US3] Write failing integration test in `packages/design-system/tests/unit/test_audit_replay.py` covering: replay against a fixture manifest with the current version (passes), replay with an embedded older version (warns) per `contracts/manifest-field.md`
-- [ ] T080 [US3] Implement the replay flow in `packages/design-system/src/design_system/__main__.py::audit_replay` (turns T079 green); depends on T044
+- [X] T079 [US3] Write failing integration test in `packages/design-system/tests/unit/test_audit_replay.py` covering: replay against a fixture manifest with the current version (passes), replay with an embedded older version (warns) per `contracts/manifest-field.md`
+- [X] T080 [US3] Implement the replay flow in `packages/design-system/src/design_system/__main__.py::audit_replay` (turns T079 green); depends on T044
 
 **Checkpoint**: A contributor reading only the docs can author a new surface that passes all audits.
 
@@ -228,16 +228,16 @@ Monorepo (Python uv workspace) — design-system lives at
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T081 [P] Add audit-performance benchmarks in `packages/design-system/benchmarks/bench_audits.py`: palette Track A ≤ 100 ms, Track B ≤ 5 s on a 50-game PDF, typography PDF ≤ 2 s, lexical (both languages) ≤ 1 s, motion static ≤ 100 ms
-- [ ] T082 [P] Wire `bench_audits.py` into CI as a labelled job that fails on >10% regression (matches constitution Principle IV enforcement model from feature 001)
-- [ ] T083 [P] Add the v1.0.0 release entry in `packages/design-system/CHANGELOG.md` listing every token, component, lexicon entry, and forbidden term shipped
-- [ ] T084 [P] Add a design-system-aware PR template at `.github/pull_request_template.md` (replacing the feature 001 stub if present) that requires: "audits ran clean", "design-system version bump categorisation (MAJOR/MINOR/PATCH)", and "forbidden-terms file diff intentional?"
-- [ ] T085 [P] Add WCAG contrast-pair table at `packages/design-system/src/design_system/audits/wcag_pairs.json` and a test in `tests/unit/test_wcag_pairs.py` asserting every locked pair clears its minimum (SC-005)
-- [ ] T086 [P] Add the colour-blindness regression check in `packages/design-system/tests/unit/test_colour_blindness.py` simulating deuteranopia on the 6-series chart palette and asserting min pairwise Delta-E ≥ 10
-- [ ] T087 [P] Add the "monochrome / colour-blind risk indicator fallback" — every `RiskTreatment` carries a glyph (○ / ◐ / ●) in addition to the colour treatment; component tests assert the glyph is present in catalogue entries (CHK037)
-- [ ] T088 [P] Run the full audit + benchmark suite, capture the coverage report, and update root `README.md` with the v1.0.0 design-system badge + a one-line description ("Forensic Analytics Design System v1.0.0 — audits enforced in CI")
-- [ ] T089 [P] Run the design-system audits against every existing report fixture in `tests/fixtures/pgn/known-clean/` and `tests/fixtures/pgn/known-suspect/` produced by feature 001 to confirm no historical artefact regresses
-- [ ] T090 Tag the v1.0.0 release: bump `packages/design-system/pyproject.toml`, update `version.py`'s `__version__`, regenerate every committed adapter artefact, commit the diff, and verify feature 001's manifest now stamps `design_system_version = "1.0.0"`
+- [X] T081 [P] Add audit-performance benchmarks in `packages/design-system/benchmarks/bench_audits.py`: palette Track A ≤ 100 ms, Track B ≤ 5 s on a 50-game PDF, typography PDF ≤ 2 s, lexical (both languages) ≤ 1 s, motion static ≤ 100 ms
+- [X] T082 [P] Wire `bench_audits.py` into CI as a labelled job that fails on >10% regression (matches constitution Principle IV enforcement model from feature 001)
+- [X] T083 [P] Add the v1.0.0 release entry in `packages/design-system/CHANGELOG.md` listing every token, component, lexicon entry, and forbidden term shipped
+- [X] T084 [P] Add a design-system-aware PR template at `.github/pull_request_template.md` (replacing the feature 001 stub if present) that requires: "audits ran clean", "design-system version bump categorisation (MAJOR/MINOR/PATCH)", and "forbidden-terms file diff intentional?"
+- [X] T085 [P] Add WCAG contrast-pair table at `packages/design-system/src/design_system/audits/wcag_pairs.json` and a test in `tests/unit/test_wcag_pairs.py` asserting every locked pair clears its minimum (SC-005)
+- [X] T086 [P] Add the colour-blindness regression check in `packages/design-system/tests/unit/test_colour_blindness.py` simulating deuteranopia on the 6-series chart palette and asserting min pairwise Delta-E ≥ 10
+- [X] T087 [P] Add the "monochrome / colour-blind risk indicator fallback" — every `RiskTreatment` carries a glyph (○ / ◐ / ●) in addition to the colour treatment; component tests assert the glyph is present in catalogue entries (CHK037)
+- [X] T088 [P] Run the full audit + benchmark suite, capture the coverage report, and update root `README.md` with the v1.0.0 design-system badge + a one-line description ("Forensic Analytics Design System v1.0.0 — audits enforced in CI")
+- [X] T089 [P] Run the design-system audits against every existing report fixture in `tests/fixtures/pgn/known-clean/` and `tests/fixtures/pgn/known-suspect/` produced by feature 001 to confirm no historical artefact regresses
+- [X] T090 Tag the v1.0.0 release: bump `packages/design-system/pyproject.toml`, update `version.py`'s `__version__`, regenerate every committed adapter artefact, commit the diff, and verify feature 001's manifest now stamps `design_system_version = "1.0.0"`
 
 ---
 

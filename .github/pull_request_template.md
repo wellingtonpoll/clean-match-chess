@@ -15,7 +15,23 @@
 ## Brand / forbidden-vocabulary
 
 - [ ] Rendered artefacts pass the lexical audit (`uv run pytest -m audit_lexical` or `python -m design_system.audits.lexical`).
-- [ ] If `tests/fixtures/forbidden-terms/*.txt` changed: every existing report fixture still passes.
+- [ ] If `tests/fixtures/forbidden-terms/*.txt` changed: every existing report fixture still passes; the forbidden-terms file diff is intentional and reviewed.
+
+## Design system (feature 002)
+
+- [ ] All four design-system audits ran clean
+      (`uv run pytest -m "audit_palette or audit_typography or audit_motion or audit_lexical"`).
+- [ ] Version bump categorisation declared (pick one):
+      - [ ] PATCH — docs / fixtures / refactor only
+      - [ ] MINOR — new token, component, lexicon entry, or forbidden term
+      - [ ] MAJOR — removed/relaxed audit, changed easing/duration envelope, removed lexicon term
+      - [ ] None — no design-system surface touched
+- [ ] If touched: `packages/design-system/pyproject.toml` version updated.
+- [ ] If touched: `packages/design-system/CHANGELOG.md` updated.
+- [ ] If adapter files regenerated: committed artefacts under
+      `packages/design-system/adapters/**` match the compiler output
+      (golden-file tests will confirm).
+- [ ] Motion overrides (if added): expiry ≤ 90 days, reviewer + reason filled in.
 
 ## Heuristic versioning (if applicable)
 

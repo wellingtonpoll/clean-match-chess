@@ -1,0 +1,83 @@
+{
+  "language": "en",
+  "version": "1.0.0",
+  "entries": [
+    {
+      "term": "Behavioral Signal",
+      "definition": "A computed metric describing player behaviour relative to the engine reference under matched complexity.",
+      "context": "narrative",
+      "alternatives_preferred": ["engine-correlation evidence", "matched-complexity signal"],
+      "alternatives_forbidden": ["cheater", "cheating"]
+    },
+    {
+      "term": "Statistical Irregularity",
+      "definition": "A measurement falling outside the expected distribution for the player's rating band and game phase.",
+      "context": "narrative",
+      "alternatives_preferred": ["outlier observation", "distributional anomaly"],
+      "alternatives_forbidden": ["fraud", "fraudster"]
+    },
+    {
+      "term": "Complexity Correlation",
+      "definition": "The relationship between move precision and the computational complexity of the position.",
+      "context": "narrative",
+      "alternatives_preferred": ["complexity-precision pairing"],
+      "alternatives_forbidden": ["guilty"]
+    },
+    {
+      "term": "Tactical Precision Burst",
+      "definition": "A short run of consecutively near-optimal moves in high-complexity positions.",
+      "context": "narrative",
+      "alternatives_preferred": ["burst window", "precision streak"],
+      "alternatives_forbidden": ["cheat detected", "confirmed cheating"]
+    },
+    {
+      "term": "Risk Window",
+      "definition": "A contiguous segment of plies where the aggregated suspicion score crosses an elevated regime.",
+      "context": "narrative",
+      "alternatives_preferred": ["flagged segment", "elevated regime"],
+      "alternatives_forbidden": ["verdict"]
+    },
+    {
+      "term": "Analytical Confidence",
+      "definition": "The bootstrap-derived confidence interval around an aggregated suspicion score.",
+      "context": "narrative",
+      "alternatives_preferred": ["confidence interval", "bootstrap CI"],
+      "alternatives_forbidden": ["convicted"]
+    },
+    {
+      "term": "Regime",
+      "definition": "A classified phase of the game (opening, middlegame, endgame) used to scope a signal.",
+      "context": "metadata",
+      "alternatives_preferred": ["phase"],
+      "alternatives_forbidden": []
+    },
+    {
+      "term": "Engine Reference",
+      "definition": "The locked Stockfish + UCI option set used to generate the comparison evaluation.",
+      "context": "manifest",
+      "alternatives_preferred": ["Stockfish reference"],
+      "alternatives_forbidden": []
+    },
+    {
+      "term": "Bootstrap Estimate",
+      "definition": "A resampling-based statistic carrying its own confidence interval.",
+      "context": "narrative",
+      "alternatives_preferred": ["resampled estimate"],
+      "alternatives_forbidden": ["accused"]
+    },
+    {
+      "term": "Determinism Guarantee",
+      "definition": "The locked-engine-options promise that re-running an audit produces a bit-identical artefact on the same architecture.",
+      "context": "manifest",
+      "alternatives_preferred": ["reproducible run"],
+      "alternatives_forbidden": []
+    },
+    {
+      "term": "Reproducibility Manifest",
+      "definition": "The embedded record listing every input hash, engine version, and tooling version needed to re-render the artefact.",
+      "context": "manifest",
+      "alternatives_preferred": ["embedded manifest"],
+      "alternatives_forbidden": ["criminal", "perpetrator"]
+    }
+  ]
+}

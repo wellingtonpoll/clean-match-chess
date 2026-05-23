@@ -1,16 +1,28 @@
-"""Component catalogue loader (T016).
+"""JSON-driven component catalogue (T076).
 
-MVP catalogue is a small immutable dict mapping component name to
-its tokens-of-record + supported surfaces + state list. The full
-JSON-driven catalogue is a Phase-5 task (T076) for feature 002 US3.
+The canonical source is `catalogue.json` in this directory. The dict
+exposed here loads it at import time; mutation is not supported.
 """
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Final
 
 from design_system.components.risk_treatments import ALL as ALL_RISK_TREATMENTS
 from design_system.components.risk_treatments import RiskTreatment
+
+CATALOGUE_FILE: Final[Path] = Path(__file__).resolve().parent / "catalogue.json"
+
+
+@dataclass(frozen=True, slots=True)
+class AccessibilityRequirement:
+    min_contrast_text: float | None
+    min_contrast_non_text: float | None
+    keyboard_focusable: bool
+    aria_role: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,94 +32,36 @@ class Component:
     tokens_of_record: tuple[str, ...]
     states: tuple[str, ...]
     surfaces: frozenset[str]
+    accessibility: AccessibilityRequirement
+    added_in: str
 
 
-COMPONENTS: dict[str, Component] = {
-    "analytical-card": Component(
-        name="analytical-card",
-        description="Large dark surface card carrying a headline metric and supporting copy.",
-        tokens_of_record=(
-            "color.surface",
-            "color.border",
-            "color.text",
-            "color.muted",
-            "color.signal",
-            "radius.lg",
-            "spacing.4",
-            "spacing.6",
-            "typography.metric",
-            "typography.body",
-            "shadow.card",
-        ),
-        states=("default",),
-        surfaces=frozenset({"pdf", "html", "web"}),
-    ),
-    "risk-pill": Component(
-        name="risk-pill",
-        description="Categorical risk indicator (LOW / MEDIUM / HIGH) with role marker.",
-        tokens_of_record=(
-            "color.background",
-            "color.surface",
-            "color.muted",
-            "color.amber",
-            "color.signal",
-            "color.border",
-            "radius.sm",
-            "typography.body_medium",
-        ),
-        states=("default",),
-        surfaces=frozenset({"pdf", "html", "web"}),
-    ),
-    "timeline": Component(
-        name="timeline",
-        description="Per-ply ribbon with regime markers and complexity heatmap.",
-        tokens_of_record=(
-            "color.background",
-            "color.surface",
-            "color.signal",
-            "color.amber",
-            "color.muted",
-            "spacing.2",
-            "spacing.4",
-        ),
-        states=("default", "hover"),
-        surfaces=frozenset({"html", "web"}),
-    ),
-    "heuristic-badge": Component(
-        name="heuristic-badge",
-        description="Signal name + version pill (e.g., engine-correlation@0.1.0).",
-        tokens_of_record=(
-            "color.surface",
-            "color.muted",
-            "color.text",
-            "radius.sm",
-            "typography.body",
-        ),
-        states=("default",),
-        surfaces=frozenset({"pdf", "html", "web"}),
-    ),
-    "manifest-block": Component(
-        name="manifest-block",
-        description="Tabular block listing reproducibility manifest fields.",
-        tokens_of_record=(
-            "color.surface",
-            "color.border",
-            "color.text",
-            "color.muted",
-            "spacing.3",
-            "typography.body",
-        ),
-        states=("default",),
-        surfaces=frozenset({"pdf", "html", "web"}),
-    ),
-    "code-inline": Component(
-        name="code-inline",
-        description="Inline monospace span for hashes, hex values, identifiers.",
-        tokens_of_record=("color.surface", "color.text", "typography.body"),
-        states=("default",),
-        surfaces=frozenset({"pdf", "html", "web"}),
-    ),
-}
+def _coerce_accessibility(payload: dict[str, Any]) -> AccessibilityRequirement:
+    return AccessibilityRequirement(
+        min_contrast_text=payload.get("min_contrast_text"),
+        min_contrast_non_text=payload.get("min_contrast_non_text"),
+        keyboard_focusable=bool(payload.get("keyboard_focusable", False)),
+        aria_role=payload.get("aria_role"),
+    )
+
+
+def _load_components(path: Path = CATALOGUE_FILE) -> dict[str, Component]:
+    payload = json.loads(path.read_text())
+    out: dict[str, Component] = {}
+    for name, entry in payload.get("components", {}).items():
+        out[name] = Component(
+            name=name,
+            description=entry["description"],
+            tokens_of_record=tuple(entry["tokens_of_record"]),
+            states=tuple(entry["states"]),
+            surfaces=frozenset(entry["surfaces"]),
+            accessibility=_coerce_accessibility(entry["accessibility"]),
+            added_in=entry["added_in"],
+        )
+    return out
+
+
+COMPONENTS: dict[str, Component] = _load_components()
 
 
 def get(name: str) -> Component:
@@ -124,4 +78,12 @@ def all_risk_treatments() -> tuple[RiskTreatment, ...]:
     return ALL_RISK_TREATMENTS
 
 
-__all__ = ["COMPONENTS", "Component", "all_risk_treatments", "get", "names"]
+__all__ = [
+    "CATALOGUE_FILE",
+    "COMPONENTS",
+    "AccessibilityRequirement",
+    "Component",
+    "all_risk_treatments",
+    "get",
+    "names",
+]
