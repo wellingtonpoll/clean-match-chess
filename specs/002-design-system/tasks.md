@@ -138,20 +138,20 @@ Monorepo (Python uv workspace) — design-system lives at
 
 ### Wire feature 001 report-engine to the design system
 
-- [ ] T045 [P] [US1] Write failing integration test `packages/report-engine/tests/test_palette_compliance.py` asserting the canonical 50-game fixture report passes the palette audit (both tracks)
-- [ ] T046 [P] [US1] Write failing integration test `packages/report-engine/tests/test_typography_compliance.py` asserting the same fixture passes the typography audit on PDF + HTML
-- [ ] T047 [P] [US1] Write failing integration test `packages/report-engine/tests/test_motion_static_compliance.py` asserting the static CSS passes the motion audit
-- [ ] T048 [P] [US1] Write failing integration test `packages/report-engine/tests/test_lexical_compliance.py` asserting the rendered PDF, HTML, JSON, and Jinja2 templates all pass the lexical audit (en + pt)
-- [ ] T049 [P] [US1] Write failing integration test `packages/report-engine/tests/test_manifest_design_system_version.py` asserting every rendered manifest contains a non-empty `design_system_version` matching the running package version (SC-008)
-- [ ] T050 [US1] Implement `packages/report-engine/src/report_engine/styles.py` exposing `get_weasyprint_css_path()` and `get_design_system_version()` that delegate to `design_system`
-- [ ] T051 [US1] Update `packages/report-engine/src/report_engine/templates/base.html` to `@import url("…/design-system/adapters/weasyprint/tokens.css")` and adopt the locked Jinja macros for Analytical Card, Risk Pill, Timeline, Heuristic Badge, Manifest Block, Code Inline
-- [ ] T052 [US1] Update `packages/report-engine/src/report_engine/render_pdf.py` to use the bundled OFL fonts via WeasyPrint `@font-face` declarations from the design-system adapter
-- [ ] T053 [US1] Update `packages/report-engine/src/report_engine/render_pdf.py` and `render_html.py` to embed `design_system.version.__version__` in the manifest output (turns T049 green)
-- [ ] T054 [US1] Adopt the analytical lexicon in `packages/report-engine/src/report_engine/narrative.py`: every narrative caption uses canonical terms from `entries_en.json` / `entries_pt.json` (turns T048 green for narrative paths)
-- [ ] T055 [US1] Replace any colour literals in `packages/report-engine/src/report_engine/charts.py` (matplotlib SVG charts) with the design-system chart-series palette so charts pass Track B of the palette audit (turns T045 green for chart pixels)
-- [ ] T056 [US1] Add risk-pill rendering in `packages/report-engine/src/report_engine/render_html.py` using the locked `RiskTreatment` constants (LOW gray, MEDIUM amber, HIGH signal-yellow) — never red
-- [ ] T057 [US1] Run all four audits against the canonical fixture report end-to-end via `uv run pytest -m "audit_palette or audit_typography or audit_motion or audit_lexical"`; confirm zero findings and that the byte-stability test from feature 001 T080 still passes (no regression in determinism)
-- [ ] T058 [US1] Run coverage on `packages/design-system/src/` and `packages/report-engine/src/` and confirm ≥85% line / ≥80% branch
+- [x] T045 [P] [US1] Write failing integration test `packages/report-engine/tests/test_palette_compliance.py` asserting the canonical 50-game fixture report passes the palette audit (both tracks)
+- [x] T046 [P] [US1] Write failing integration test `packages/report-engine/tests/test_typography_compliance.py` asserting the same fixture passes the typography audit on PDF + HTML
+- [x] T047 [P] [US1] Write failing integration test `packages/report-engine/tests/test_motion_static_compliance.py` asserting the static CSS passes the motion audit
+- [x] T048 [P] [US1] Write failing integration test `packages/report-engine/tests/test_lexical_compliance.py` asserting the rendered PDF, HTML, JSON, and Jinja2 templates all pass the lexical audit (en + pt)
+- [x] T049 [P] [US1] Write failing integration test `packages/report-engine/tests/test_manifest_design_system_version.py` asserting every rendered manifest contains a non-empty `design_system_version` matching the running package version (SC-008)
+- [x] T050 [US1] Implement `packages/report-engine/src/report_engine/styles.py` exposing `get_weasyprint_css_path()` and `get_design_system_version()` that delegate to `design_system`
+- [x] T051 [US1] Update `packages/report-engine/src/report_engine/templates/base.html` to `@import url("…/design-system/adapters/weasyprint/tokens.css")` and adopt the locked Jinja macros for Analytical Card, Risk Pill, Timeline, Heuristic Badge, Manifest Block, Code Inline
+- [x] T052 [US1] Update `packages/report-engine/src/report_engine/render_pdf.py` to use the bundled OFL fonts via WeasyPrint `@font-face` declarations from the design-system adapter
+- [x] T053 [US1] Update `packages/report-engine/src/report_engine/render_pdf.py` and `render_html.py` to embed `design_system.version.__version__` in the manifest output (turns T049 green)
+- [x] T054 [US1] Adopt the analytical lexicon in `packages/report-engine/src/report_engine/narrative.py`: every narrative caption uses canonical terms from `entries_en.json` / `entries_pt.json` (turns T048 green for narrative paths)
+- [x] T055 [US1] Replace any colour literals in `packages/report-engine/src/report_engine/charts.py` (matplotlib SVG charts) with the design-system chart-series palette so charts pass Track B of the palette audit (turns T045 green for chart pixels)
+- [x] T056 [US1] Add risk-pill rendering in `packages/report-engine/src/report_engine/render_html.py` using the locked `RiskTreatment` constants (LOW gray, MEDIUM amber, HIGH signal-yellow) — never red
+- [x] T057 [US1] Run all four audits against the canonical fixture report end-to-end via `uv run pytest -m "audit_palette or audit_typography or audit_motion or audit_lexical"`; confirm zero findings and that the byte-stability test from feature 001 T080 still passes (no regression in determinism)
+- [x] T058 [US1] Run coverage on `packages/design-system/src/` and `packages/report-engine/src/` and confirm ≥85% line / ≥80% branch
 
 **Checkpoint**: User Story 1 is fully functional. Every PDF/HTML rendered by feature 001 now passes the four-audit gate and the manifest stamps the design-system version.
 

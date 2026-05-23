@@ -7,6 +7,7 @@ dependencies = [
     "pydantic>=2.7",
     "jinja2>=3.1",
     "shared-types",
+    "design-system",
 ]
 
 [project.optional-dependencies]

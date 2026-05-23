@@ -44,7 +44,7 @@
     <h2>Headline</h2>
     <p data-role="metric-card-headline">
       <span class="metric">{{ "%.3f"|format(score) }}</span>
-      <span class="risk-{{ risk_level_class }}">{{ risk_label }}</span>
+      <span class="risk-{{ risk_level_class }}" data-role="risk-pill">{{ risk_label }}</span>
     </p>
     <p class="muted">95% confidence interval: ({{ "%.3f"|format(ci_low) }}, {{ "%.3f"|format(ci_high) }})</p>
   </div>

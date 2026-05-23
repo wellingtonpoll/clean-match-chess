@@ -1024,6 +1024,7 @@ name = "report-engine"
 version = "0.1.0"
 source = { editable = "packages/report-engine" }
 dependencies = [
+    { name = "design-system" },
     { name = "jinja2" },
     { name = "pydantic" },
     { name = "shared-types" },
@@ -1040,6 +1041,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
+    { name = "design-system", editable = "packages/design-system" },
     { name = "jinja2", specifier = ">=3.1" },
     { name = "pydantic", specifier = ">=2.7" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8" },
