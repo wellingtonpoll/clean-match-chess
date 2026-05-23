@@ -1,0 +1,4 @@
+{
+  "_comment": "Documented exceptions to the locked motion curve / duration range. Each entry MUST carry an expiry; expired entries fail the audit.",
+  "overrides": []
+}

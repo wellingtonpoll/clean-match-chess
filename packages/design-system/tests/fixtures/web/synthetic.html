@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Synthetic design-system fixture</title>
+  <link rel="stylesheet" href="../../../adapters/css-vars/tokens.css">
+  <style>
+    body {
+      background: var(--color-background);
+      color: var(--color-text);
+      margin: 0;
+      padding: var(--spacing-7);
+      font-family: Inter, system-ui, sans-serif;
+    }
+    .card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-6);
+      transition: opacity 275ms var(--motion-easing-standard);
+    }
+    .metric {
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--color-signal);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <p data-role="metric-card-headline">
+      <span class="metric">0.123</span>
+      <span data-role="risk-pill">Low risk</span>
+    </p>
+  </div>
+</body>
+</html>

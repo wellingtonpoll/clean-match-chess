@@ -77,8 +77,25 @@ def audit_static_css(css_path: Path) -> AuditReport:
 
 
 def audit_web(*paths: str) -> AuditReport:
-    """Dynamic web audit; deferred to Phase 3."""
+    """Dynamic web audit (Playwright). Env-gated by CLEANMATCH_WEB_AUDIT=1.
+
+    Phase 4 ships the harness skeleton + override-expiry parser. The
+    real instrumented Playwright run lands with Phase 5 + the Phase-3
+    web feature; until then this returns a `web_audit_deferred` or
+    `web_audit_skipped` warning, depending on env state.
+    """
+    import os
+
     now = datetime.now(UTC)
+    if os.environ.get("CLEANMATCH_WEB_AUDIT") != "1":
+        rule = "web_audit_skipped"
+        actual = "skipped (CLEANMATCH_WEB_AUDIT not set)"
+        message = "Dynamic motion audit skipped; set CLEANMATCH_WEB_AUDIT=1 to enable."
+    else:
+        rule = "web_audit_deferred"
+        actual = "not implemented"
+        message = "Dynamic motion audit implementation lands in Phase 5 + Phase 3 web feature."
+
     return AuditReport(
         audit_name=AuditName.MOTION,
         artefact=",".join(paths),
@@ -88,11 +105,11 @@ def audit_web(*paths: str) -> AuditReport:
         findings=(
             AuditFinding(
                 severity=Severity.WARN,
-                rule="web_audit_deferred",
+                rule=rule,
                 location=",".join(paths),
                 expected="Playwright run",
-                actual="skipped",
-                message="Dynamic motion audit lands with Phase 3 web surfaces.",
+                actual=actual,
+                message=message,
             ),
         ),
     )

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "_comment": "Phase 3 placeholder. The Tailwind theme produced by design-system.tokens.compile_tailwind is the source of truth; shadcn primitives should consume it via the design-system colour and radius variables. Replace this file when apps/frontend lands.",
+  "style": "default",
+  "tailwind": {
+    "config": "../../tailwind.config.ts",
+    "css": "../../app/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils"
+  }
+}

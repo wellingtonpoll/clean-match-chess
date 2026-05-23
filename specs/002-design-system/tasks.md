@@ -165,29 +165,29 @@ Monorepo (Python uv workspace) — design-system lives at
 
 ### Tailwind adapter
 
-- [ ] T059 [P] [US2] Write failing golden-file test in `packages/design-system/tests/golden/test_compile_tailwind.py` asserting that compiling v1.0.0 `tokens.json` produces a byte-identical `adapters/tailwind/theme.ts`
-- [ ] T060 [P] [US2] Implement `packages/design-system/src/design_system/tokens/compile_tailwind.py` emitting a TypeScript theme object compatible with Tailwind v4 (`@theme` block / `theme.ts` export) (turns T059 green); commit the generated artefact
+- [x] T059 [P] [US2] Write failing golden-file test in `packages/design-system/tests/golden/test_compile_tailwind.py` asserting that compiling v1.0.0 `tokens.json` produces a byte-identical `adapters/tailwind/theme.ts`
+- [x] T060 [P] [US2] Implement `packages/design-system/src/design_system/tokens/compile_tailwind.py` emitting a TypeScript theme object compatible with Tailwind v4 (`@theme` block / `theme.ts` export) (turns T059 green); commit the generated artefact
 
 ### CSS-variables adapter
 
-- [ ] T061 [P] [US2] Write failing golden-file test for `compile_css_vars.py` in `packages/design-system/tests/golden/test_compile_css_vars.py`
-- [ ] T062 [P] [US2] Implement `packages/design-system/src/design_system/tokens/compile_css_vars.py` emitting `:root { --color-background: #0B0B0D; ... }` (turns T061 green); commit `adapters/css-vars/tokens.css`
+- [x] T061 [P] [US2] Write failing golden-file test for `compile_css_vars.py` in `packages/design-system/tests/golden/test_compile_css_vars.py`
+- [x] T062 [P] [US2] Implement `packages/design-system/src/design_system/tokens/compile_css_vars.py` emitting `:root { --color-background: #0B0B0D; ... }` (turns T061 green); commit `adapters/css-vars/tokens.css`
 
 ### shadcn theme placeholder
 
-- [ ] T063 [P] [US2] Add `packages/design-system/adapters/shadcn/components.json` skeleton + a `README.md` explaining the Phase 3 integration steps and the locked `RiskTreatment` recipe for shadcn's variant API
+- [x] T063 [P] [US2] Add `packages/design-system/adapters/shadcn/components.json` skeleton + a `README.md` explaining the Phase 3 integration steps and the locked `RiskTreatment` recipe for shadcn's variant API
 
 ### Framer Motion adapter
 
-- [ ] T064 [P] [US2] Write failing golden-file test for `compile_framer_motion.py` producing a TS variants object that exports the single easing curve + duration tokens
-- [ ] T065 [P] [US2] Implement `packages/design-system/src/design_system/tokens/compile_framer_motion.py` and commit `adapters/framer-motion/variants.ts` (turns T064 green)
+- [x] T064 [P] [US2] Write failing golden-file test for `compile_framer_motion.py` producing a TS variants object that exports the single easing curve + duration tokens
+- [x] T065 [P] [US2] Implement `packages/design-system/src/design_system/tokens/compile_framer_motion.py` and commit `adapters/framer-motion/variants.ts` (turns T064 green)
 
 ### Dynamic motion audit (Playwright harness)
 
-- [ ] T066 [P] [US2] Write failing harness test in `packages/design-system/tests/unit/test_audit_motion_dynamic.py` that exercises a synthetic page (under `tests/fixtures/web/synthetic.html`) and asserts the captured transitions are within `[200, 350]` ms and the easing matches the locked curve
-- [ ] T067 [US2] Implement the Playwright-backed `audit_web` in `packages/design-system/src/design_system/audits/motion.py` plus the interaction inventory in `motion_interactions.py` (turns T066 green); skip-marked unless `CLEANMATCH_WEB_AUDIT=1` is set
-- [ ] T068 [P] [US2] Add `tests/fixtures/web/synthetic.html` + `tests/fixtures/web/synthetic.css` consuming the generated Tailwind theme + Framer Motion variants for the harness above
-- [ ] T069 [US2] Confirm `motion_overrides.json` exists at `packages/design-system/src/design_system/audits/motion_overrides.json` with `{ "overrides": [] }` initially, and that an integration test in `tests/unit/test_motion_overrides.py` asserts the parser, the expiry check, and the "expired override fails the audit" rule
+- [x] T066 [P] [US2] Write failing harness test in `packages/design-system/tests/unit/test_audit_motion_dynamic.py` that exercises a synthetic page (under `tests/fixtures/web/synthetic.html`) and asserts the captured transitions are within `[200, 350]` ms and the easing matches the locked curve
+- [x] T067 [US2] Implement the Playwright-backed `audit_web` in `packages/design-system/src/design_system/audits/motion.py` plus the interaction inventory in `motion_interactions.py` (turns T066 green); skip-marked unless `CLEANMATCH_WEB_AUDIT=1` is set
+- [x] T068 [P] [US2] Add `tests/fixtures/web/synthetic.html` + `tests/fixtures/web/synthetic.css` consuming the generated Tailwind theme + Framer Motion variants for the harness above
+- [x] T069 [US2] Confirm `motion_overrides.json` exists at `packages/design-system/src/design_system/audits/motion_overrides.json` with `{ "overrides": [] }` initially, and that an integration test in `tests/unit/test_motion_overrides.py` asserts the parser, the expiry check, and the "expired override fails the audit" rule
 
 **Checkpoint**: All Phase-3-bound adapters compile deterministically and the dynamic motion audit harness is green on the synthetic fixture. Real web pages remain Phase 3.
 
