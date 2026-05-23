@@ -89,3 +89,36 @@ jobs:
             -m "audit_palette or audit_typography or audit_motion or audit_lexical" \
             --no-cov
 
+  sc007_onboarding_log:
+    if: contains(github.event.pull_request.labels.*.name, 'onboarding-event')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: design_system_audits
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.11.5"
+      - run: uv python install 3.11
+      - run: uv sync --all-packages --all-extras
+      - name: Four locked audits (first-push gate per SC-007)
+        run: |
+          if [ "${{ github.event.pull_request.commits }}" -ne 1 ]; then
+            echo "SC007: skipping --- PR has more than one push"
+            exit 0
+          fi
+          uv run pytest \
+            packages/design-system/tests/ \
+            -m "audit_palette or audit_typography or audit_motion or audit_lexical" \
+            --no-cov
+      - name: Emit SC007 structured log line
+        if: always()
+        run: |
+          printf 'SC007_EVENT date=%s author=%s pr=%s result=%s\n' \
+            "$(date -u +%Y-%m-%d)" \
+            "${{ github.event.pull_request.user.login }}" \
+            "${{ github.event.pull_request.html_url }}" \
+            "${{ job.status }}"
+

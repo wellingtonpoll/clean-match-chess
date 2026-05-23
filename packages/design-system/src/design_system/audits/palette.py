@@ -104,19 +104,79 @@ def audit_pdf(
     )
 
 
+_CANONICAL_RISK_CLASSES: frozenset[str] = frozenset({"risk-low", "risk-medium", "risk-high"})
+_RISK_ROLE_VALUE = "risk-pill"
+
+
 def audit_risk_indicators(
     artefact_path: Path,
-    tokens: TokenFile | None = None,  # noqa: ARG001 - reserved for Track C
+    tokens: TokenFile | None = None,  # noqa: ARG001 - reserved for full DOM walk
 ) -> AuditReport:
-    """Track C: risk-indicator role check. Deferred (HTML/PDF DOM walk)."""
-    now = datetime.now(UTC)
-    return _skipped_report(
-        AuditName.PALETTE,
-        str(artefact_path),
-        now,
-        "track-c-risk",
-        "Track C (risk-indicator role check) deferred until DOM-walk tooling lands.",
+    """Track C: producer-side risk-indicator role + canonical-class check.
+
+    HTML-only in MVP (PDF surface tagged via the source HTML template;
+    PDF structure-tree walk deferred to feature 003).
+    """
+    from selectolax.parser import HTMLParser
+
+    started = datetime.now(UTC)
+    findings: list[AuditFinding] = []
+    text = artefact_path.read_text()
+    tree = HTMLParser(text)
+
+    for node in tree.css(f'[data-role="{_RISK_ROLE_VALUE}"]'):
+        classes = _classes_of(node)
+        canonical = classes & _CANONICAL_RISK_CLASSES
+        if not canonical:
+            findings.append(
+                AuditFinding(
+                    severity=Severity.BLOCK,
+                    rule="risk_treatment_non_canonical",
+                    location=str(artefact_path),
+                    expected="one of {risk-low, risk-medium, risk-high}",
+                    actual=", ".join(sorted(classes)) or "no class",
+                    message=(
+                        "risk-pill node carries no canonical risk class "
+                        "(risk-low / risk-medium / risk-high)"
+                    ),
+                )
+            )
+
+    for cls in _CANONICAL_RISK_CLASSES:
+        for node in tree.css(f".{cls}"):
+            attrs = getattr(node, "attributes", {}) or {}
+            if attrs.get("data-role") != _RISK_ROLE_VALUE:
+                findings.append(
+                    AuditFinding(
+                        severity=Severity.BLOCK,
+                        rule="missing_risk_role",
+                        location=str(artefact_path),
+                        expected=f'data-role="{_RISK_ROLE_VALUE}"',
+                        actual="absent",
+                        message=(
+                            f"node with class {cls!r} encodes risk colour but lacks "
+                            f"the role marker data-role={_RISK_ROLE_VALUE!r}"
+                        ),
+                    )
+                )
+
+    finished = datetime.now(UTC)
+    status = AuditStatus.PASS if not findings else AuditStatus.FAIL
+    return AuditReport(
+        audit_name=AuditName.PALETTE,
+        artefact=str(artefact_path),
+        started_at=started,
+        finished_at=finished,
+        status=status,
+        findings=tuple(findings),
+        tracks={"risk": TrackResult(name="risk", status=status, findings=tuple(findings))},
     )
+
+
+def _classes_of(node: object) -> frozenset[str]:
+    attrs = getattr(node, "attributes", {}) or {}
+    raw = attrs.get("class", "") or ""
+    return frozenset(part for part in raw.split() if part)
 
 
 def _line_of(text: str, offset: int) -> int:

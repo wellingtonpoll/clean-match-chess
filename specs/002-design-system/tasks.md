@@ -255,26 +255,26 @@ foreground binding.)
 
 ### A2 — `Headline-Metric` / `metric-card-headline` role markers
 
-- [ ] T091 [P] [US1] Write failing typography-audit unit test in `packages/design-system/tests/unit/test_audit_typography_role.py` covering: untagged metric numeral fails with `missing_metric_role`; tagged-but-wrong-typography fails with `wrong_metric_typography`; tagged-and-correct passes
-- [ ] T092 [US1] Extend `packages/design-system/src/design_system/audits/typography.py` to emit `missing_metric_role` findings whenever a node uses `typography.metric` without the role marker (turns T091 green); update feature 001 templates (`packages/report-engine/src/report_engine/templates/base.html` and PDF structure-tree producer in `render_pdf.py`) to tag every headline metric with `data-role="metric-card-headline"` (HTML) or PDF structure role `Headline-Metric`
+- [X] T091 [P] [US1] Write failing typography-audit unit test in `packages/design-system/tests/unit/test_audit_typography_role.py` covering: untagged metric numeral fails with `missing_metric_role`; tagged-but-wrong-typography fails with `wrong_metric_typography`; tagged-and-correct passes
+- [X] T092 [US1] Extend `packages/design-system/src/design_system/audits/typography.py` to emit `missing_metric_role` findings whenever a node uses `typography.metric` without the role marker (turns T091 green); update feature 001 templates (`packages/report-engine/src/report_engine/templates/base.html` and PDF structure-tree producer in `render_pdf.py`) to tag every headline metric with `data-role="metric-card-headline"` (HTML) or PDF structure role `Headline-Metric`
 
 ### C2 / I1 — risk-indicator Track-C audit + producer tagging
 
-- [ ] T093 [P] [US1] Write failing unit test in `packages/design-system/tests/unit/test_audit_palette_risk.py` covering: untagged risk indicator fails with `missing_risk_role`; tagged-but-off-recipe fails with `risk_treatment_non_canonical`; tagged-and-canonical passes for each of LOW / MEDIUM / HIGH
-- [ ] T094 [US1] Implement Track C in `packages/design-system/src/design_system/audits/palette.py::audit_risk_indicators` per `contracts/audit-palette.md` Track-C section (turns T093 green); extend the risk-pill rendering introduced by T056 in `packages/report-engine/src/report_engine/render_html.py` and the PDF structure-tree producer in `packages/report-engine/src/report_engine/render_pdf.py` to emit the role marker (`data-role="risk-pill"` / PDF role `Risk-Pill`) and to consume `RiskTreatment` constants exclusively
-- [ ] T095 [P] [US1] Wire Track C invocation into the existing palette compliance test in `packages/report-engine/tests/test_palette_compliance.py` (T045) so every rendered fixture exercises the risk-indicator check
+- [X] T093 [P] [US1] Write failing unit test in `packages/design-system/tests/unit/test_audit_palette_risk.py` covering: untagged risk indicator fails with `missing_risk_role`; tagged-but-off-recipe fails with `risk_treatment_non_canonical`; tagged-and-canonical passes for each of LOW / MEDIUM / HIGH
+- [X] T094 [US1] Implement Track C in `packages/design-system/src/design_system/audits/palette.py::audit_risk_indicators` per `contracts/audit-palette.md` Track-C section (turns T093 green); extend the risk-pill rendering introduced by T056 in `packages/report-engine/src/report_engine/render_html.py` and the PDF structure-tree producer in `packages/report-engine/src/report_engine/render_pdf.py` to emit the role marker (`data-role="risk-pill"` / PDF role `Risk-Pill`) and to consume `RiskTreatment` constants exclusively
+- [X] T095 [P] [US1] Wire Track C invocation into the existing palette compliance test in `packages/report-engine/tests/test_palette_compliance.py` (T045) so every rendered fixture exercises the risk-indicator check
 
 ### C1 — SC-006 usability protocol
 
-- [ ] T096 [P] Author `packages/design-system/docs/SC006_USABILITY.md` defining: panel-selection rule (n≥5 non-technical readers, no chess.com fairplay-policy familiarity), interview script, pass/fail tally template, "analytical/forensic" / "anti-cheat/accusatory" word-bank for unprompted-response coding, and where to record results (`packages/design-system/docs/SC006_RESULTS.md`); the doc itself MUST pass the lexical audit (en + pt where applicable)
+- [X] T096 [P] Author `packages/design-system/docs/SC006_USABILITY.md` defining: panel-selection rule (n≥5 non-technical readers, no chess.com fairplay-policy familiarity), interview script, pass/fail tally template, "analytical/forensic" / "anti-cheat/accusatory" word-bank for unprompted-response coding, and where to record results (`packages/design-system/docs/SC006_RESULTS.md`); the doc itself MUST pass the lexical audit (en + pt where applicable)
 
 ### C3 — SC-007 onboarding measurement infrastructure
 
-- [ ] T097 [P] Author `packages/design-system/docs/SC007_ONBOARDING_LOG.md` defining: "onboarding event" (a PR labelled `onboarding-event` whose author has fewer than 3 prior commits to `packages/design-system/` or `packages/report-engine/`), pass criterion (all four audits clean on first commit, before any maintainer push), tally template (`SC007_RESULTS.md` with rows of date, contributor, PR URL, pass/fail); add a CI step in `.github/workflows/ci.yml` that, on labelled PRs, appends a row to `SC007_RESULTS.md` and re-evaluates the rolling ≥3-event passing-rate; the doc itself MUST pass the lexical audit
+- [X] T097 [P] Author `packages/design-system/docs/SC007_ONBOARDING_LOG.md` defining: "onboarding event" (a PR labelled `onboarding-event` whose author has fewer than 3 prior commits to `packages/design-system/` or `packages/report-engine/`), pass criterion (all four audits clean on first commit, before any maintainer push), tally template (`SC007_RESULTS.md` with rows of date, contributor, PR URL, pass/fail); add a CI step in `.github/workflows/ci.yml` that, on labelled PRs, appends a row to `SC007_RESULTS.md` and re-evaluates the rolling ≥3-event passing-rate; the doc itself MUST pass the lexical audit
 
 ### C4 — PDF reduced-motion explicit invariant
 
-- [ ] T098 [P] [US1] Write unit test `packages/design-system/tests/unit/test_pdf_reduced_motion.py` asserting the generated `adapters/weasyprint/tokens.css` contains zero `transition` and zero `animation` CSS declarations; enforces FR-014 trivially for the PDF surface (which has no motion) and prevents future drift from accidentally adding animated CSS to the PDF adapter
+- [X] T098 [P] [US1] Write unit test `packages/design-system/tests/unit/test_pdf_reduced_motion.py` asserting the generated `adapters/weasyprint/tokens.css` contains zero `transition` and zero `animation` CSS declarations; enforces FR-014 trivially for the PDF surface (which has no motion) and prevents future drift from accidentally adding animated CSS to the PDF adapter
 
 ---
 
