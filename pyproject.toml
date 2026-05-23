@@ -1,0 +1,109 @@
+[project]
+name = "clean-match-chess-workspace"
+version = "0.0.0"
+description = "Clean Match Chess monorepo workspace root."
+requires-python = ">=3.11,<3.13"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.7",
+    "mypy>=1.11",
+    "pytest>=8",
+    "pytest-cov>=5",
+    "pytest-benchmark>=4",
+]
+
+[tool.uv.workspace]
+members = [
+    "apps/cli",
+    "packages/analysis-core",
+    "packages/heuristics",
+    "packages/report-engine",
+    "packages/shared-types",
+]
+
+[tool.uv.sources]
+shared-types = { workspace = true }
+analysis-core = { workspace = true }
+heuristics = { workspace = true }
+report-engine = { workspace = true }
+cleanmatch-cli = { workspace = true }
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [
+    "tests/fixtures",
+    "**/data/books",
+    "**/__pycache__",
+]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W", "I", "N", "UP", "B", "S", "A", "ARG", "RUF",
+]
+ignore = [
+    "S101",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S101", "S105", "S106", "S108", "ARG"]
+"apps/cli/src/cleanmatch_cli/main.py" = ["B008", "A002", "ARG001"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+files = [
+    "apps/cli/src",
+    "packages/analysis-core/src",
+    "packages/heuristics/src",
+    "packages/report-engine/src",
+    "packages/shared-types/src",
+]
+
+[[tool.mypy.overrides]]
+module = ["chess.*", "stockfish.*", "weasyprint.*", "pdfminer.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = [
+    "apps/cli/tests",
+    "packages/analysis-core/tests",
+    "packages/heuristics/tests",
+    "packages/report-engine/tests",
+    "packages/shared-types/tests",
+    "tests/e2e",
+]
+markers = [
+    "slow: tests that exercise real Stockfish or do heavy work",
+    "benchmark: performance regression tests",
+    "e2e: cross-package end-to-end tests",
+]
+addopts = "--strict-markers --import-mode=importlib"
+filterwarnings = [
+    "error",
+]
+
+[tool.coverage.run]
+branch = true
+source = [
+    "apps/cli/src",
+    "packages/analysis-core/src",
+    "packages/heuristics/src",
+    "packages/report-engine/src",
+    "packages/shared-types/src",
+]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]

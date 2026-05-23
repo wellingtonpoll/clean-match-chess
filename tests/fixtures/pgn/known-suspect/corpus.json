@@ -1,0 +1,21 @@
+{
+  "version": "0.1.0",
+  "label": "known-suspect",
+  "selection_rule": "Per spec SC-002 v1.0.0: >=50% selective-assistance + remainder full-engine. THIS SEED IS SYNTHETIC and must be replaced with curated real-corpus games before v1.0.0 ships. Tracked in tests/fixtures/sc-002/.",
+  "entries": [
+    {
+      "file": "synthetic-full-engine.pgn",
+      "category": "full_engine",
+      "source": "Synthetic placeholder. Replace with engine-vs-engine games from a public corpus.",
+      "modifications": "None.",
+      "expected_label": "HIGH"
+    },
+    {
+      "file": "synthetic-selective-assistance.pgn",
+      "category": "selective_assistance",
+      "source": "Synthetic placeholder. Replace with curated human games where engine consultation occurred at critical moves.",
+      "modifications": "None.",
+      "expected_label": "MEDIUM or HIGH"
+    }
+  ]
+}

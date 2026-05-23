@@ -1,0 +1,21 @@
+{
+  "version": "0.1.0",
+  "label": "known-clean",
+  "selection_rule": "Pre-engine-era master games published in the public domain. Used as the LOW-risk baseline.",
+  "entries": [
+    {
+      "file": "morphy-vs-allies-1858.pgn",
+      "source": "Public domain. Paris, 1858. Morphy vs Duke Karl / Count Isouard ('Opera Game').",
+      "white_rating": null,
+      "black_rating": null,
+      "modifications": "None. Verbatim from canonical PGN."
+    },
+    {
+      "file": "anderssen-vs-kieseritzky-1851.pgn",
+      "source": "Public domain. London, 1851. Anderssen vs Kieseritzky ('Immortal Game').",
+      "white_rating": null,
+      "black_rating": null,
+      "modifications": "None. Verbatim from canonical PGN."
+    }
+  ]
+}

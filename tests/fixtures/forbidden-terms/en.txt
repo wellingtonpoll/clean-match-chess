@@ -1,0 +1,15 @@
+# version: 1.0.0
+# Forbidden English vocabulary for any user-facing surface.
+# Format: term<TAB>category<TAB>match_mode
+cheater	accusation	word_boundary
+cheating	accusation	word_boundary
+cheat detected	verdict	substring
+confirmed cheating	verdict	substring
+guilty	verdict	word_boundary
+fraud	accusation	word_boundary
+fraudster	accusation	word_boundary
+criminal	slur	word_boundary
+verdict	verdict	word_boundary
+convicted	verdict	word_boundary
+accused	verdict	word_boundary
+perpetrator	slur	word_boundary

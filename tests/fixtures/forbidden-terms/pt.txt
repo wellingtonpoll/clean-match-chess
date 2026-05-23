@@ -1,0 +1,15 @@
+# version: 1.0.0
+# Vocabulário proibido em português para qualquer superfície do usuário.
+# Format: termo<TAB>categoria<TAB>match_mode
+trapaceiro	accusation	word_boundary
+trapaça	accusation	word_boundary
+trapaça confirmada	verdict	substring
+culpado	verdict	word_boundary
+fraude	accusation	word_boundary
+fraudador	accusation	word_boundary
+criminoso	slur	word_boundary
+veredicto	verdict	word_boundary
+condenado	verdict	word_boundary
+acusado	verdict	word_boundary
+perpetrador	slur	word_boundary
+violação	accusation	word_boundary

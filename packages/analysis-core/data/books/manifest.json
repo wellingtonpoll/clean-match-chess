@@ -1,0 +1,10 @@
+{
+  "name": "lichess-masters-2400-d20",
+  "version": "1.0.0",
+  "source": "Lichess Masters database",
+  "elo_floor": 2400,
+  "depth_plies": 20,
+  "sha256": "PENDING_BUNDLE",
+  "status": "deferred",
+  "note": "Real Polyglot .bin generation requires the Lichess masters PGN corpus + polyglot-create. Tracked as a follow-up build task; until bundled, OpeningBook() raises FileNotFoundError and the pipeline must short-circuit (treat all plies as non-book) with a logged warning."
+}

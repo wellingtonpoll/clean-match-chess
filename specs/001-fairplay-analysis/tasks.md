@@ -41,14 +41,14 @@ Monorepo (Python uv workspace) — see `plan.md` Project Structure:
 
 **Purpose**: Bootstrap the monorepo, tooling, and CI scaffolding.
 
-- [ ] T001 Create the monorepo skeleton at the repo root: `apps/{cli,api,frontend}/`, `packages/{analysis-core,heuristics,report-engine,shared-types}/`, `infra/{docker,compose}/`, `tests/{fixtures,e2e}/` (empty `__init__.py` / placeholder files where needed)
-- [ ] T002 [P] Create root `pyproject.toml` declaring the uv workspace and the Python 3.11 requirement, listing all `apps/*` and `packages/*` as workspace members
-- [ ] T003 [P] Add per-package `pyproject.toml` files under `apps/cli/`, `packages/analysis-core/`, `packages/heuristics/`, `packages/report-engine/`, `packages/shared-types/` with name, version 0.1.0, and Python 3.11 requirement
-- [ ] T004 [P] Configure `ruff` (lint + format) at root `pyproject.toml` `[tool.ruff]`, enabling `E,F,W,I,N,UP,B,S,A,ARG,RUF` and excluding `tests/fixtures/`
-- [ ] T005 [P] Configure `mypy --strict` at root `pyproject.toml` `[tool.mypy]`, targeting `packages/*/src/` and `apps/cli/src/`
-- [ ] T006 [P] Configure `pytest` + `pytest-cov` + `pytest-benchmark` at root `pyproject.toml` `[tool.pytest.ini_options]`, including `markers = ["slow", "benchmark", "e2e"]`, `addopts = "--strict-markers --cov-fail-under=85"`
-- [ ] T007 [P] Create `.github/workflows/ci.yml` running on push/PR: `uv sync` → `uv run ruff check` → `uv run ruff format --check` → `uv run mypy` → `uv run pytest`
-- [ ] T008 [P] Add `.editorconfig`, `.gitignore` (Python, uv, `.cleanmatch/`, `dist/`, `*.pdf` build artefacts), and update root `README.md` pointing at `specs/001-fairplay-analysis/quickstart.md`
+- [x] T001 Create the monorepo skeleton at the repo root: `apps/{cli,api,frontend}/`, `packages/{analysis-core,heuristics,report-engine,shared-types}/`, `infra/{docker,compose}/`, `tests/{fixtures,e2e}/` (empty `__init__.py` / placeholder files where needed)
+- [x] T002 [P] Create root `pyproject.toml` declaring the uv workspace and the Python 3.11 requirement, listing all `apps/*` and `packages/*` as workspace members
+- [x] T003 [P] Add per-package `pyproject.toml` files under `apps/cli/`, `packages/analysis-core/`, `packages/heuristics/`, `packages/report-engine/`, `packages/shared-types/` with name, version 0.1.0, and Python 3.11 requirement
+- [x] T004 [P] Configure `ruff` (lint + format) at root `pyproject.toml` `[tool.ruff]`, enabling `E,F,W,I,N,UP,B,S,A,ARG,RUF` and excluding `tests/fixtures/`
+- [x] T005 [P] Configure `mypy --strict` at root `pyproject.toml` `[tool.mypy]`, targeting `packages/*/src/` and `apps/cli/src/`
+- [x] T006 [P] Configure `pytest` + `pytest-cov` + `pytest-benchmark` at root `pyproject.toml` `[tool.pytest.ini_options]`, including `markers = ["slow", "benchmark", "e2e"]`, `addopts = "--strict-markers --cov-fail-under=85"`
+- [x] T007 [P] Create `.github/workflows/ci.yml` running on push/PR: `uv sync` → `uv run ruff check` → `uv run ruff format --check` → `uv run mypy` → `uv run pytest`
+- [x] T008 [P] Add `.editorconfig`, `.gitignore` (Python, uv, `.cleanmatch/`, `dist/`, `*.pdf` build artefacts), and update root `README.md` pointing at `specs/001-fairplay-analysis/quickstart.md`
 
 **Checkpoint**: `uv sync && uv run pytest` (no tests yet) and `uv run mypy` both succeed on an empty workspace.
 
@@ -62,48 +62,48 @@ Monorepo (Python uv workspace) — see `plan.md` Project Structure:
 
 ### Shared types (data-model.md → `packages/shared-types/`)
 
-- [ ] T009 [P] Create `packages/shared-types/src/shared_types/__init__.py` exporting all schemas listed below
-- [ ] T010 [P] Implement `Game`, `PlayerRef`, `Move`, `CandidateMove`, `Position`, `ComplexityScore` Pydantic v2 models in `packages/shared-types/src/shared_types/game.py`
-- [ ] T011 [P] Implement `Segment`, `HeuristicVersion`, `SignalContribution`, `SignalAggregate` models in `packages/shared-types/src/shared_types/signal.py`
-- [ ] T012 [P] Implement `SuspicionScore` with risk-level enum bound to the locked thresholds (low <0.35, medium [0.35,0.70), high ≥0.70) in `packages/shared-types/src/shared_types/score.py`
-- [ ] T013 [P] Implement `AuditRun`, `RunError`, `EngineFingerprint`, `AccountProfile`, `CrossGamePattern` models in `packages/shared-types/src/shared_types/audit_run.py`
-- [ ] T014 [P] Implement `Report`, `Narrative`, `FlaggedSegment`, `ReproducibilityManifest`, `HostInfo` models in `packages/shared-types/src/shared_types/report.py`
-- [ ] T015 Add unit tests covering validation rules (variant must be "standard", ply_count ≥ 10 for scoring eligibility, threshold→risk-level mapping) in `packages/shared-types/tests/`
+- [x] T009 [P] Create `packages/shared-types/src/shared_types/__init__.py` exporting all schemas listed below
+- [x] T010 [P] Implement `Game`, `PlayerRef`, `Move`, `CandidateMove`, `Position`, `ComplexityScore` Pydantic v2 models in `packages/shared-types/src/shared_types/game.py`
+- [x] T011 [P] Implement `Segment`, `HeuristicVersion`, `SignalContribution`, `SignalAggregate` models in `packages/shared-types/src/shared_types/signal.py`
+- [x] T012 [P] Implement `SuspicionScore` with risk-level enum bound to the locked thresholds (low <0.35, medium [0.35,0.70), high ≥0.70) in `packages/shared-types/src/shared_types/score.py`
+- [x] T013 [P] Implement `AuditRun`, `RunError`, `EngineFingerprint`, `AccountProfile`, `CrossGamePattern` models in `packages/shared-types/src/shared_types/audit_run.py`
+- [x] T014 [P] Implement `Report`, `Narrative`, `FlaggedSegment`, `ReproducibilityManifest`, `HostInfo` models in `packages/shared-types/src/shared_types/report.py`
+- [x] T015 Add unit tests covering validation rules (variant must be "standard", ply_count ≥ 10 for scoring eligibility, threshold→risk-level mapping) in `packages/shared-types/tests/`
 
 ### Engine + manifest + cache (analysis-core foundation)
 
-- [ ] T016 [P] Implement `packages/analysis-core/src/analysis_core/manifest.py` — builds `ReproducibilityManifest` from engine fingerprint, heuristic registry snapshot, library versions, input PGN SHA256, opening-book SHA256, host info
-- [ ] T017 [P] Implement `packages/analysis-core/src/analysis_core/engine/uci.py` — thin wrapper over `python-chess` `engine.SimpleEngine` that pins UCI options (`Threads=1, Hash=256, MultiPV=5, UseNNUE=true`) and rejects mutations after initialisation
-- [ ] T018 Implement `packages/analysis-core/src/analysis_core/engine/stockfish_pool.py` — multiprocessing pool of UCI workers, deterministic settings, graceful shutdown; depends on T017
-- [ ] T019 [P] Implement `packages/analysis-core/src/analysis_core/pipeline/cache.py` — deterministic cache keyed by manifest hash, persists under `${CLEANMATCH_HOME:-~/.cleanmatch}/runs/<run-id>/`
-- [ ] T020 [P] Add unit tests in `packages/analysis-core/tests/` covering: manifest determinism (same inputs → same SHA), engine UCI option pinning, cache hit/miss + bypass via `--no-cache`
+- [x] T016 [P] Implement `packages/analysis-core/src/analysis_core/manifest.py` — builds `ReproducibilityManifest` from engine fingerprint, heuristic registry snapshot, library versions, input PGN SHA256, opening-book SHA256, host info
+- [x] T017 [P] Implement `packages/analysis-core/src/analysis_core/engine/uci.py` — thin wrapper over `python-chess` `engine.SimpleEngine` that pins UCI options (`Threads=1, Hash=256, MultiPV=5, UseNNUE=true`) and rejects mutations after initialisation
+- [x] T018 Implement `packages/analysis-core/src/analysis_core/engine/stockfish_pool.py` — multiprocessing pool of UCI workers, deterministic settings, graceful shutdown; depends on T017
+- [x] T019 [P] Implement `packages/analysis-core/src/analysis_core/pipeline/cache.py` — deterministic cache keyed by manifest hash, persists under `${CLEANMATCH_HOME:-~/.cleanmatch}/runs/<run-id>/`
+- [x] T020 [P] Add unit tests in `packages/analysis-core/tests/` covering: manifest determinism (same inputs → same SHA), engine UCI option pinning, cache hit/miss + bypass via `--no-cache`
 
 ### Heuristics registry + scoring scaffold
 
-- [ ] T021 Implement `packages/heuristics/src/heuristics/registry.py` — versioned signal registry returning `tuple[(name, version, callable)]`; signal modules register on import
-- [ ] T022 [P] Implement `packages/heuristics/src/heuristics/scoring/thresholds.py` exposing the locked risk thresholds (low <0.35, medium [0.35,0.70), high ≥0.70) and version stamp; manifest pulls thresholds + version from here
-- [ ] T023 [P] Add unit tests in `packages/heuristics/tests/test_registry.py` covering: registration, version retrieval, frozen-tuple immutability, threshold→risk-level pure function
+- [x] T021 Implement `packages/heuristics/src/heuristics/registry.py` — versioned signal registry returning `tuple[(name, version, callable)]`; signal modules register on import
+- [x] T022 [P] Implement `packages/heuristics/src/heuristics/scoring/thresholds.py` exposing the locked risk thresholds (low <0.35, medium [0.35,0.70), high ≥0.70) and version stamp; manifest pulls thresholds + version from here
+- [x] T023 [P] Add unit tests in `packages/heuristics/tests/test_registry.py` covering: registration, version retrieval, frozen-tuple immutability, threshold→risk-level pure function
 
 ### Opening-book infrastructure (Principle 6)
 
-- [ ] T024 [P] Implement `packages/analysis-core/src/analysis_core/ingest/opening_book.py` — Polyglot book loader (Lichess Masters book, ≥2400 Elo, depth 20 plies) with SHA256-pinned identity; exposes `is_book_ply(position) -> bool`
-- [ ] T025 [P] Bundle the Lichess Masters Polyglot book at `packages/analysis-core/data/books/lichess-masters-2400-d20.bin` and record its SHA256 in `packages/analysis-core/data/books/manifest.json`
-- [ ] T026 [P] Add unit tests for opening-book lookup against pinned fixtures in `packages/analysis-core/tests/test_opening_book.py`
+- [x] T024 [P] Implement `packages/analysis-core/src/analysis_core/ingest/opening_book.py` — Polyglot book loader (Lichess Masters book, ≥2400 Elo, depth 20 plies) with SHA256-pinned identity; exposes `is_book_ply(position) -> bool`
+- [x] T025 [P] Bundle the Lichess Masters Polyglot book at `packages/analysis-core/data/books/lichess-masters-2400-d20.bin` and record its SHA256 in `packages/analysis-core/data/books/manifest.json`
+- [x] T026 [P] Add unit tests for opening-book lookup against pinned fixtures in `packages/analysis-core/tests/test_opening_book.py`
 
 ### CLI scaffold + logging (Principle III)
 
-- [ ] T027 [P] Implement `apps/cli/src/cleanmatch_cli/main.py` — `typer` app with `audit-game`, `audit-username`, `show`, `export` subcommand stubs that exit with `1` ("not implemented yet") so the CLI surface is testable from day one
-- [ ] T028 [P] Implement `apps/cli/src/cleanmatch_cli/output/exit_codes.py` mapping `user_error → 1`, `upstream_error → 2`, `internal_error → 3` (matches contracts)
-- [ ] T029 [P] Implement `apps/cli/src/cleanmatch_cli/output/logging.py` — `structlog` configuration with pretty (stderr) and JSON formatters, controlled by `--log-format` flag and `CLEANMATCH_LOG_FORMAT` / `CLEANMATCH_LOG_LEVEL` env vars
-- [ ] T030 [P] Implement `apps/cli/src/cleanmatch_cli/output/renderers.py` — human and JSON renderers; the JSON renderer goes to stdout, human goes to stdout, logs always to stderr
-- [ ] T031 [P] Add CLI contract tests under `apps/cli/tests/contract/` verifying flag grammar (`--output`, `--log-format`, `--log-level`, `--debug`), exit-code mapping, and stdout/stderr separation for each subcommand stub
+- [x] T027 [P] Implement `apps/cli/src/cleanmatch_cli/main.py` — `typer` app with `audit-game`, `audit-username`, `show`, `export` subcommand stubs that exit with `1` ("not implemented yet") so the CLI surface is testable from day one
+- [x] T028 [P] Implement `apps/cli/src/cleanmatch_cli/output/exit_codes.py` mapping `user_error → 1`, `upstream_error → 2`, `internal_error → 3` (matches contracts)
+- [x] T029 [P] Implement `apps/cli/src/cleanmatch_cli/output/logging.py` — `structlog` configuration with pretty (stderr) and JSON formatters, controlled by `--log-format` flag and `CLEANMATCH_LOG_FORMAT` / `CLEANMATCH_LOG_LEVEL` env vars
+- [x] T030 [P] Implement `apps/cli/src/cleanmatch_cli/output/renderers.py` — human and JSON renderers; the JSON renderer goes to stdout, human goes to stdout, logs always to stderr
+- [x] T031 [P] Add CLI contract tests under `apps/cli/tests/contract/` verifying flag grammar (`--output`, `--log-format`, `--log-level`, `--debug`), exit-code mapping, and stdout/stderr separation for each subcommand stub
 
 ### Test fixtures + forbidden-terms list
 
-- [ ] T032 [P] Create `tests/fixtures/pgn/known-clean/` with at least 2 canonical PGNs (deterministic, redistributable) and `tests/fixtures/pgn/known-suspect/` with at least 2 canonical PGNs covering selective-assistance and full-engine examples (SC-002 dataset rules)
-- [ ] T033 [P] Create `tests/fixtures/stockfish/<engine-sha>/<pgn-sha>/<ply>.json` snapshot directory layout plus a snapshot-replay engine adapter under `packages/analysis-core/src/analysis_core/engine/snapshot_engine.py` so unit tests can run without the Stockfish binary
-- [ ] T034 [P] Create `tests/fixtures/forbidden-terms/en.txt` and `tests/fixtures/forbidden-terms/pt.txt` with per-entry `term\tcategory\tmatch_mode` (accusation | verdict | slur ; word_boundary | substring); seed with the SC-008 examples ("cheater", "trapaceiro", "guilty") plus an initial curated set
-- [ ] T035 [P] Add a fixture-integrity test in `tests/e2e/test_fixtures.py` that parses every fixture PGN, asserts ply_count ≥ 10 and variant == standard, and validates the forbidden-terms files are well-formed TSV
+- [x] T032 [P] Create `tests/fixtures/pgn/known-clean/` with at least 2 canonical PGNs (deterministic, redistributable) and `tests/fixtures/pgn/known-suspect/` with at least 2 canonical PGNs covering selective-assistance and full-engine examples (SC-002 dataset rules)
+- [x] T033 [P] Create `tests/fixtures/stockfish/<engine-sha>/<pgn-sha>/<ply>.json` snapshot directory layout plus a snapshot-replay engine adapter under `packages/analysis-core/src/analysis_core/engine/snapshot_engine.py` so unit tests can run without the Stockfish binary
+- [x] T034 [P] Create `tests/fixtures/forbidden-terms/en.txt` and `tests/fixtures/forbidden-terms/pt.txt` with per-entry `term\tcategory\tmatch_mode` (accusation | verdict | slur ; word_boundary | substring); seed with the SC-008 examples ("cheater", "trapaceiro", "guilty") plus an initial curated set
+- [x] T035 [P] Add a fixture-integrity test in `tests/e2e/test_fixtures.py` that parses every fixture PGN, asserts ply_count ≥ 10 and variant == standard, and validates the forbidden-terms files are well-formed TSV
 
 **Checkpoint**: All foundational packages import cleanly; `uv run mypy` + `uv run ruff check` clean; foundational unit tests pass; CLI stubs print help and exit 1 on each subcommand.
 

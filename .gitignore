@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual envs / uv
+.venv/
+venv/
+.uv-cache/
+
+# Build artefacts
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Local CleanMatch state
+.cleanmatch/
+
+# Reports
+*.pdf
+!packages/report-engine/tests/golden/*.pdf
+!packages/design-system/tests/golden/*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
