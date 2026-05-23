@@ -39,7 +39,6 @@ def test_subcommand_help_succeeds(argv: list[str]) -> None:
 @pytest.mark.parametrize(
     "argv",
     [
-        ["audit-game", "/tmp/does-not-exist.pgn"],
         ["audit-username", "someone"],
         ["show", "some-run-id"],
         ["export", "some-run-id"],

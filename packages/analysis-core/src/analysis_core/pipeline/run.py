@@ -1,0 +1,192 @@
+"""AuditRun orchestrator for single-game audits (T057).
+
+Wires:
+  PGN load → Analyzer per position → Segmentation → Signals →
+  Aggregate score → AuditRun persisted to disk.
+"""
+
+from __future__ import annotations
+
+import json
+import uuid
+from datetime import UTC, datetime
+from pathlib import Path
+
+import chess
+
+# Heuristics
+from heuristics.behavioral_patterns import blunder_suppression, precision_burst
+from heuristics.complexity_analysis import complexity_score
+from heuristics.engine_correlation import engine_correlation
+from heuristics.regime_shift import regime_shift_score
+from heuristics.scoring import aggregate_score
+from heuristics.tactical_detection import tactical_density
+from heuristics.timing_analysis import timing_anomaly
+from shared_types.audit_run import AuditRun, EngineFingerprint, RunMode, RunStatus
+from shared_types.game import Game, PlayerColor, PlayerRef, Position
+from shared_types.score import SuspicionScore
+from shared_types.signal import HeuristicVersion, SignalAggregate
+
+from analysis_core.engine.analysis import Analyzer, StaticAnalyzer
+from analysis_core.manifest import build_manifest
+from analysis_core.pipeline.cache import persist_manifest
+from analysis_core.pipeline.segmentation import segment_game
+
+DEFAULT_OPENING_BOOK_SHA256 = "0" * 64
+DEFAULT_DESIGN_SYSTEM_VERSION = "0.1.0"
+
+
+def run_single_game(
+    game: Game,
+    *,
+    subject: PlayerColor = PlayerColor.WHITE,
+    analyzer: Analyzer | None = None,
+    engine: EngineFingerprint | None = None,
+    heuristics: tuple[HeuristicVersion, ...] | None = None,
+    design_system_version: str = DEFAULT_DESIGN_SYSTEM_VERSION,
+    opening_book_sha256: str = DEFAULT_OPENING_BOOK_SHA256,
+    persist_root: Path | None = None,
+) -> AuditRun:
+    analyzer = analyzer or StaticAnalyzer()
+    engine = engine or _default_engine_fp()
+    heuristics = heuristics or _default_heuristics()
+
+    positions = _analyse_positions(game, analyzer)
+    segments = segment_game(positions)
+
+    signals: list[SignalAggregate] = []
+    signals.append(complexity_score(positions))
+    signals.append(tactical_density(positions))
+    signals.append(regime_shift_score(segments))
+    top1, top3, weighted = engine_correlation(positions, game.moves)
+    signals.extend([top1, top3, weighted])
+    signals.append(precision_burst(positions, game.moves))
+    signals.append(blunder_suppression(positions))
+    signals.append(timing_anomaly(positions, game.moves))
+
+    score = aggregate_score(tuple(signals))
+
+    subject_player = _resolve_subject(game.players, subject)
+
+    manifest = build_manifest(
+        engine=engine,
+        heuristics=heuristics,
+        input_pgn_sha256=game.pgn_sha256,
+        opening_book_sha256=opening_book_sha256,
+        design_system_version=design_system_version,
+    )
+
+    run = AuditRun(
+        id=uuid.uuid4().hex,
+        created_at=datetime.now(UTC),
+        mode=RunMode.SINGLE_GAME,
+        subject=subject_player,
+        games=(game.id,),
+        engine=engine,
+        heuristic_set=heuristics,
+        score=score,
+        status=RunStatus.COMPLETE,
+    )
+
+    if persist_root is not None:
+        _persist(run, manifest, score, persist_root)
+    else:
+        persist_manifest(manifest)
+
+    return run
+
+
+def _analyse_positions(game: Game, analyzer: Analyzer) -> tuple[Position, ...]:
+    board = chess.Board()
+    positions: list[Position] = []
+    positions.append(analyzer.analyse(board, ply=0))
+    for ply, move in enumerate(game.moves, start=1):
+        chess_move = chess.Move.from_uci(move.uci)
+        if chess_move not in board.legal_moves:
+            break
+        board.push(chess_move)
+        positions.append(analyzer.analyse(board, ply=ply))
+    return tuple(positions)
+
+
+def _resolve_subject(players: tuple[PlayerRef, PlayerRef], target: PlayerColor) -> PlayerRef:
+    for p in players:
+        if p.color is target:
+            return p
+    return players[0]
+
+
+def _default_engine_fp() -> EngineFingerprint:
+    return EngineFingerprint(
+        name="Stockfish",
+        version="0.0.0-static",
+        binary_sha256="0" * 64,
+        uci_options={"Threads": 1, "Hash": 256, "MultiPV": 5, "UseNNUE": True},
+    )
+
+
+def _default_heuristics() -> tuple[HeuristicVersion, ...]:
+    return (
+        HeuristicVersion(
+            name="engine-correlation",
+            version="0.1.0",
+            git_sha="0000000",
+            owner="cleanmatch",
+            changelog_path="packages/heuristics/CHANGELOG.md",
+        ),
+        HeuristicVersion(
+            name="complexity-analysis",
+            version="0.1.0",
+            git_sha="0000000",
+            owner="cleanmatch",
+            changelog_path="packages/heuristics/CHANGELOG.md",
+        ),
+        HeuristicVersion(
+            name="tactical-detection",
+            version="0.1.0",
+            git_sha="0000000",
+            owner="cleanmatch",
+            changelog_path="packages/heuristics/CHANGELOG.md",
+        ),
+        HeuristicVersion(
+            name="regime-shift",
+            version="0.1.0",
+            git_sha="0000000",
+            owner="cleanmatch",
+            changelog_path="packages/heuristics/CHANGELOG.md",
+        ),
+        HeuristicVersion(
+            name="behavioral-patterns",
+            version="0.1.0",
+            git_sha="0000000",
+            owner="cleanmatch",
+            changelog_path="packages/heuristics/CHANGELOG.md",
+        ),
+        HeuristicVersion(
+            name="timing-analysis",
+            version="0.1.0",
+            git_sha="0000000",
+            owner="cleanmatch",
+            changelog_path="packages/heuristics/CHANGELOG.md",
+        ),
+    )
+
+
+def _persist(
+    run: AuditRun,
+    manifest: object,
+    score: SuspicionScore,
+    root: Path,
+) -> Path:
+    dest = root / "runs" / run.id
+    dest.mkdir(parents=True, exist_ok=True)
+    (dest / "manifest.json").write_text(
+        json.dumps(manifest.model_dump(mode="json"), sort_keys=True, default=str)  # type: ignore[attr-defined]
+    )
+    (dest / "run.json").write_text(
+        json.dumps(run.model_dump(mode="json"), sort_keys=True, default=str)
+    )
+    (dest / "score.json").write_text(
+        json.dumps(score.model_dump(mode="json"), sort_keys=True, default=str)
+    )
+    return dest

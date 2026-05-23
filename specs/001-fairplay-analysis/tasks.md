@@ -117,34 +117,34 @@ Monorepo (Python uv workspace) — see `plan.md` Project Structure:
 
 ### Tests for User Story 1 (RED-first per constitution Principle II)
 
-- [ ] T036 [P] [US1] Write failing unit tests for PGN ingestion (valid PGN parses; malformed header → typed error; non-standard variant → reject; ply_count < 10 → ineligible) in `packages/analysis-core/tests/test_pgn_loader.py`
-- [ ] T037 [P] [US1] Write failing unit tests for per-position engine analysis using the snapshot engine adapter in `packages/analysis-core/tests/test_engine_analysis.py`
-- [ ] T038 [P] [US1] Write failing unit tests for `ComplexityScore` computation (branching, volatility, density, ambiguity) on pinned positions in `packages/heuristics/tests/test_complexity_analysis.py`
-- [ ] T039 [P] [US1] Write failing unit tests for tactical-position / only-move detection in `packages/heuristics/tests/test_tactical_detection.py`
-- [ ] T040 [P] [US1] Write failing unit tests for segmentation (opening / middlegame / tactical / conversion / endgame + regime shift detection) in `packages/heuristics/tests/test_regime_shift.py`
-- [ ] T041 [P] [US1] Write failing unit tests for engine_correlation signal (top-1 match, top-3 match, complexity-weighted correlation per Principle 7) in `packages/heuristics/tests/test_engine_correlation.py`
-- [ ] T042 [P] [US1] Write failing unit tests for behavioral_patterns signal (bursts of precision, blunder suppression, alternation) in `packages/heuristics/tests/test_behavioral_patterns.py`
-- [ ] T043 [P] [US1] Write failing unit tests for timing_analysis signal in `packages/heuristics/tests/test_timing_analysis.py`
-- [ ] T044 [P] [US1] Write failing unit tests for score aggregation + bootstrap CI (N=1000) + threshold→risk-level mapping in `packages/heuristics/tests/test_scoring.py`
-- [ ] T045 [P] [US1] Write failing CLI integration test `apps/cli/tests/integration/test_audit_game.py` that exercises the full pipeline against the known-clean and known-suspect fixtures and asserts the documented exit-code and JSON-shape contract from `contracts/cli-audit-game.md`
-- [ ] T046 [P] [US1] Write failing determinism integration test `apps/cli/tests/integration/test_determinism.py` that runs `audit-game` twice on the same fixture and asserts bit-identical JSON output (FR-017, same architecture)
+- [x] T036 [P] [US1] Write failing unit tests for PGN ingestion (valid PGN parses; malformed header → typed error; non-standard variant → reject; ply_count < 10 → ineligible) in `packages/analysis-core/tests/test_pgn_loader.py`
+- [x] T037 [P] [US1] Write failing unit tests for per-position engine analysis using the snapshot engine adapter in `packages/analysis-core/tests/test_engine_analysis.py`
+- [x] T038 [P] [US1] Write failing unit tests for `ComplexityScore` computation (branching, volatility, density, ambiguity) on pinned positions in `packages/heuristics/tests/test_complexity_analysis.py`
+- [x] T039 [P] [US1] Write failing unit tests for tactical-position / only-move detection in `packages/heuristics/tests/test_tactical_detection.py`
+- [x] T040 [P] [US1] Write failing unit tests for segmentation (opening / middlegame / tactical / conversion / endgame + regime shift detection) in `packages/heuristics/tests/test_regime_shift.py`
+- [x] T041 [P] [US1] Write failing unit tests for engine_correlation signal (top-1 match, top-3 match, complexity-weighted correlation per Principle 7) in `packages/heuristics/tests/test_engine_correlation.py`
+- [x] T042 [P] [US1] Write failing unit tests for behavioral_patterns signal (bursts of precision, blunder suppression, alternation) in `packages/heuristics/tests/test_behavioral_patterns.py`
+- [x] T043 [P] [US1] Write failing unit tests for timing_analysis signal in `packages/heuristics/tests/test_timing_analysis.py`
+- [x] T044 [P] [US1] Write failing unit tests for score aggregation + bootstrap CI (N=1000) + threshold→risk-level mapping in `packages/heuristics/tests/test_scoring.py`
+- [x] T045 [P] [US1] Write failing CLI integration test `apps/cli/tests/integration/test_audit_game.py` that exercises the full pipeline against the known-clean and known-suspect fixtures and asserts the documented exit-code and JSON-shape contract from `contracts/cli-audit-game.md`
+- [x] T046 [P] [US1] Write failing determinism integration test `apps/cli/tests/integration/test_determinism.py` that runs `audit-game` twice on the same fixture and asserts bit-identical JSON output (FR-017, same architecture)
 
 ### Implementation for User Story 1
 
-- [ ] T047 [US1] Implement PGN loader + canonicalisation (headers sorted, whitespace stripped) + SHA256 in `packages/analysis-core/src/analysis_core/ingest/pgn_loader.py` (turns T036 green)
-- [ ] T048 [US1] Implement per-position engine analysis (top-N candidates via MultiPV, eval in cp / mate_in) in `packages/analysis-core/src/analysis_core/engine/analysis.py` (turns T037 green); depends on T018
-- [ ] T049 [US1] Implement `packages/analysis-core/src/analysis_core/pipeline/segmentation.py` — phase boundaries + regime-shift detector (turns T040 green)
-- [ ] T050 [P] [US1] Implement `packages/heuristics/src/heuristics/complexity_analysis/__init__.py` with `__signal_version__ = "0.1.0"` (turns T038 green)
-- [ ] T051 [P] [US1] Implement `packages/heuristics/src/heuristics/tactical_detection/__init__.py` (turns T039 green)
-- [ ] T052 [P] [US1] Implement `packages/heuristics/src/heuristics/engine_correlation/__init__.py` with top-1, top-3, and complexity-weighted match (turns T041 green); depends on T050
-- [ ] T053 [P] [US1] Implement `packages/heuristics/src/heuristics/behavioral_patterns/__init__.py` (turns T042 green)
-- [ ] T054 [P] [US1] Implement `packages/heuristics/src/heuristics/regime_shift/__init__.py` (turns T040 green for regime portion)
-- [ ] T055 [P] [US1] Implement `packages/heuristics/src/heuristics/timing_analysis/__init__.py` (turns T043 green)
-- [ ] T056 [US1] Implement `packages/heuristics/src/heuristics/scoring/__init__.py` — aggregator + bootstrap CI (N=1000) + risk classifier; book and forced-move plies excluded; depends on T021-T024, T050-T055 (turns T044 green)
-- [ ] T057 [US1] Implement `packages/analysis-core/src/analysis_core/pipeline/run.py` — `AuditRun` orchestrator: ingest → engine pool → analysis → segmentation → registered signals → scoring → persist under `~/.cleanmatch/runs/<run-id>/`; depends on T016-T019, T047-T056
-- [ ] T058 [US1] Implement `apps/cli/src/cleanmatch_cli/commands/audit_game.py` per `contracts/cli-audit-game.md`; depends on T027-T030, T057 (turns T045 and T046 green)
-- [ ] T059 [US1] Implement plain-language move-level rationale strings for each signal (FR-012); strings live in each heuristic module's `narrative.py`
-- [ ] T060 [US1] Run the full US1 test suite and confirm ≥85% line / ≥80% branch coverage on touched packages
+- [x] T047 [US1] Implement PGN loader + canonicalisation (headers sorted, whitespace stripped) + SHA256 in `packages/analysis-core/src/analysis_core/ingest/pgn_loader.py` (turns T036 green)
+- [x] T048 [US1] Implement per-position engine analysis (top-N candidates via MultiPV, eval in cp / mate_in) in `packages/analysis-core/src/analysis_core/engine/analysis.py` (turns T037 green); depends on T018
+- [x] T049 [US1] Implement `packages/analysis-core/src/analysis_core/pipeline/segmentation.py` — phase boundaries + regime-shift detector (turns T040 green)
+- [x] T050 [P] [US1] Implement `packages/heuristics/src/heuristics/complexity_analysis/__init__.py` with `__signal_version__ = "0.1.0"` (turns T038 green)
+- [x] T051 [P] [US1] Implement `packages/heuristics/src/heuristics/tactical_detection/__init__.py` (turns T039 green)
+- [x] T052 [P] [US1] Implement `packages/heuristics/src/heuristics/engine_correlation/__init__.py` with top-1, top-3, and complexity-weighted match (turns T041 green); depends on T050
+- [x] T053 [P] [US1] Implement `packages/heuristics/src/heuristics/behavioral_patterns/__init__.py` (turns T042 green)
+- [x] T054 [P] [US1] Implement `packages/heuristics/src/heuristics/regime_shift/__init__.py` (turns T040 green for regime portion)
+- [x] T055 [P] [US1] Implement `packages/heuristics/src/heuristics/timing_analysis/__init__.py` (turns T043 green)
+- [x] T056 [US1] Implement `packages/heuristics/src/heuristics/scoring/__init__.py` — aggregator + bootstrap CI (N=1000) + risk classifier; book and forced-move plies excluded; depends on T021-T024, T050-T055 (turns T044 green)
+- [x] T057 [US1] Implement `packages/analysis-core/src/analysis_core/pipeline/run.py` — `AuditRun` orchestrator: ingest → engine pool → analysis → segmentation → registered signals → scoring → persist under `~/.cleanmatch/runs/<run-id>/`; depends on T016-T019, T047-T056
+- [x] T058 [US1] Implement `apps/cli/src/cleanmatch_cli/commands/audit_game.py` per `contracts/cli-audit-game.md`; depends on T027-T030, T057 (turns T045 and T046 green)
+- [x] T059 [US1] Implement plain-language move-level rationale strings for each signal (FR-012); strings live in each heuristic module's `narrative.py`
+- [x] T060 [US1] Run the full US1 test suite and confirm ≥85% line / ≥80% branch coverage on touched packages
 
 **Checkpoint**: User Story 1 is fully functional. `cleanmatch audit-game` produces a deterministic, explainable result on the canonical fixtures.
 

@@ -51,7 +51,10 @@ def audit_game(
     debug: bool = typer.Option(False, "--debug"),
 ) -> None:
     """Audit a single PGN (single-game probabilistic analysis)."""
-    _not_implemented("audit-game")
+    from cleanmatch_cli.commands.audit_game import execute
+
+    code = execute(input, subject=subject, output=output)
+    raise typer.Exit(code=code.value)
 
 
 @app.command("audit-username")
