@@ -183,17 +183,17 @@ Monorepo (Python uv workspace) — see `plan.md` Project Structure:
 
 ### Tests for User Story 3
 
-- [ ] T070 [P] [US3] Write failing unit tests for the timeline renderer (one line per ply, classifications, flag markers) in `apps/cli/tests/unit/test_timeline_renderer.py`
-- [ ] T071 [P] [US3] Write failing unit tests for the ply-detail renderer (top engine moves, eval delta, complexity, signal contributions, rationale) in `apps/cli/tests/unit/test_ply_renderer.py`
-- [ ] T072 [P] [US3] Write failing CLI integration test `apps/cli/tests/integration/test_show.py` covering run-not-found (exit 1), batch-without-game-index (exit 1 with list), happy path human + JSON, and `--ply` focused mode per `contracts/cli-show.md`
+- [x] T070 [P] [US3] Write failing unit tests for the timeline renderer (one line per ply, classifications, flag markers) in `apps/cli/tests/unit/test_timeline_renderer.py`
+- [x] T071 [P] [US3] Write failing unit tests for the ply-detail renderer (top engine moves, eval delta, complexity, signal contributions, rationale) in `apps/cli/tests/unit/test_ply_renderer.py`
+- [x] T072 [P] [US3] Write failing CLI integration test `apps/cli/tests/integration/test_show.py` covering run-not-found (exit 1), batch-without-game-index (exit 1 with list), happy path human + JSON, and `--ply` focused mode per `contracts/cli-show.md`
 
 ### Implementation for User Story 3
 
-- [ ] T073 [P] [US3] Implement `apps/cli/src/cleanmatch_cli/commands/show.py` orchestration: load run from disk, dispatch to timeline or ply renderer
-- [ ] T074 [P] [US3] Implement timeline renderer in `apps/cli/src/cleanmatch_cli/output/timeline_renderer.py` (turns T070 green)
-- [ ] T075 [P] [US3] Implement ply-detail renderer in `apps/cli/src/cleanmatch_cli/output/ply_renderer.py` (turns T071 green)
-- [ ] T076 [US3] Wire renderers into `show` command; ensure SC-003 invariant (every flag cites ≥1 move, ≥1 signal, ≥1 principle) is enforced with a runtime check; depends on T073-T075 (turns T072 green)
-- [ ] T077 [US3] Run the full US3 test suite
+- [x] T073 [P] [US3] Implement `apps/cli/src/cleanmatch_cli/commands/show.py` orchestration: load run from disk, dispatch to timeline or ply renderer
+- [x] T074 [P] [US3] Implement timeline renderer in `apps/cli/src/cleanmatch_cli/output/timeline_renderer.py` (turns T070 green)
+- [x] T075 [P] [US3] Implement ply-detail renderer in `apps/cli/src/cleanmatch_cli/output/ply_renderer.py` (turns T071 green)
+- [x] T076 [US3] Wire renderers into `show` command; ensure SC-003 invariant (every flag cites ≥1 move, ≥1 signal, ≥1 principle) is enforced with a runtime check; depends on T073-T075 (turns T072 green)
+- [x] T077 [US3] Run the full US3 test suite
 
 **Checkpoint**: User Stories 1, 2, 3 all work independently.
 

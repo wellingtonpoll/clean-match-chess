@@ -35,7 +35,7 @@ from shared_types.signal import HeuristicVersion, SignalAggregate
 
 from analysis_core.engine.analysis import Analyzer, StaticAnalyzer
 from analysis_core.manifest import build_manifest
-from analysis_core.pipeline.cache import persist_manifest
+from analysis_core.pipeline.cache import cleanmatch_home, persist_manifest
 from analysis_core.pipeline.segmentation import segment_game
 
 DEFAULT_OPENING_BOOK_SHA256 = "0" * 64
@@ -94,10 +94,9 @@ def run_single_game(
         status=RunStatus.COMPLETE,
     )
 
-    if persist_root is not None:
-        _persist(run, manifest, score, persist_root)
-    else:
-        persist_manifest(manifest)
+    root = persist_root or cleanmatch_home()
+    _persist(run, manifest, score, root, game=game, positions=positions)
+    persist_manifest(manifest)
 
     return run
 
@@ -234,6 +233,9 @@ def _persist(
     manifest: object,
     score: SuspicionScore,
     root: Path,
+    *,
+    game: Game,
+    positions: tuple[Position, ...],
 ) -> Path:
     dest = root / "runs" / run.id
     dest.mkdir(parents=True, exist_ok=True)
@@ -245,5 +247,15 @@ def _persist(
     )
     (dest / "score.json").write_text(
         json.dumps(score.model_dump(mode="json"), sort_keys=True, default=str)
+    )
+    (dest / "game.json").write_text(
+        json.dumps(game.model_dump(mode="json"), sort_keys=True, default=str)
+    )
+    (dest / "positions.json").write_text(
+        json.dumps(
+            [p.model_dump(mode="json") for p in positions],
+            sort_keys=True,
+            default=str,
+        )
     )
     return dest

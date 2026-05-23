@@ -94,7 +94,10 @@ def show(
     language: str = typer.Option("en", "--language"),
 ) -> None:
     """Show timeline / per-move detail for a persisted run."""
-    _not_implemented("show")
+    from cleanmatch_cli.commands.show import execute
+
+    code = execute(run_id, ply=ply)
+    raise typer.Exit(code=code.value)
 
 
 @app.command("export")
