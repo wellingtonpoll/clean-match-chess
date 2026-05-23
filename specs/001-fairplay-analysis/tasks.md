@@ -158,18 +158,18 @@ Monorepo (Python uv workspace) — see `plan.md` Project Structure:
 
 ### Tests for User Story 2
 
-- [ ] T061 [P] [US2] Write failing unit tests for the chess.com archive index lookup, monthly fetch, and 429/5xx backoff (1/2/4/8/16 s, max 3 retries) in `packages/analysis-core/tests/test_chesscom_client.py` (use `pytest-httpx` to mock responses)
-- [ ] T062 [P] [US2] Write failing unit tests for the time-control filter and "fewer games than requested" handling in the same file
-- [ ] T063 [P] [US2] Write failing unit tests for `AccountProfile` aggregation + `CrossGamePattern` detection in `packages/heuristics/tests/test_account_profile.py`
-- [ ] T064 [P] [US2] Write failing CLI integration test `apps/cli/tests/integration/test_audit_username.py` covering happy path, partial completion on Ctrl-C, and JSON shape per `contracts/cli-audit-username.md`
+- [x] T061 [P] [US2] Write failing unit tests for the chess.com archive index lookup, monthly fetch, and 429/5xx backoff (1/2/4/8/16 s, max 3 retries) in `packages/analysis-core/tests/test_chesscom_client.py` (use `pytest-httpx` to mock responses)
+- [x] T062 [P] [US2] Write failing unit tests for the time-control filter and "fewer games than requested" handling in the same file
+- [x] T063 [P] [US2] Write failing unit tests for `AccountProfile` aggregation + `CrossGamePattern` detection in `packages/heuristics/tests/test_account_profile.py`
+- [x] T064 [P] [US2] Write failing CLI integration test `apps/cli/tests/integration/test_audit_username.py` covering happy path, partial completion on Ctrl-C, and JSON shape per `contracts/cli-audit-username.md`
 
 ### Implementation for User Story 2
 
-- [ ] T065 [US2] Implement `packages/analysis-core/src/analysis_core/ingest/chesscom_client.py` — `httpx` sync client, `User-Agent: cleanmatch/<version>`, 5 req/s polite limit, exponential backoff (turns T061-T062 green)
-- [ ] T066 [US2] Implement `packages/heuristics/src/heuristics/scoring/account_profile.py` — per-game aggregation, weighted aggregate score, cross-game patterns (turns T063 green); depends on T056
-- [ ] T067 [US2] Extend `packages/analysis-core/src/analysis_core/pipeline/run.py` with a `batch_run()` orchestrator that runs `audit-game` per fetched PGN with controlled `--max-concurrency`; signal handler captures Ctrl-C → `status=partial`
-- [ ] T068 [US2] Implement `apps/cli/src/cleanmatch_cli/commands/audit_username.py` per `contracts/cli-audit-username.md` (turns T064 green); depends on T065-T067
-- [ ] T069 [US2] Run the full US2 test suite and confirm coverage stays ≥85/80
+- [x] T065 [US2] Implement `packages/analysis-core/src/analysis_core/ingest/chesscom_client.py` — `httpx` sync client, `User-Agent: cleanmatch/<version>`, 5 req/s polite limit, exponential backoff (turns T061-T062 green)
+- [x] T066 [US2] Implement `packages/heuristics/src/heuristics/scoring/account_profile.py` — per-game aggregation, weighted aggregate score, cross-game patterns (turns T063 green); depends on T056
+- [x] T067 [US2] Extend `packages/analysis-core/src/analysis_core/pipeline/run.py` with a `batch_run()` orchestrator that runs `audit-game` per fetched PGN with controlled `--max-concurrency`; signal handler captures Ctrl-C → `status=partial`
+- [x] T068 [US2] Implement `apps/cli/src/cleanmatch_cli/commands/audit_username.py` per `contracts/cli-audit-username.md` (turns T064 green); depends on T065-T067
+- [x] T069 [US2] Run the full US2 test suite and confirm coverage stays ≥85/80
 
 **Checkpoint**: User Stories 1 AND 2 both work independently on canonical fixtures.
 

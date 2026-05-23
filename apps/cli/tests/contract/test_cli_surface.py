@@ -39,7 +39,6 @@ def test_subcommand_help_succeeds(argv: list[str]) -> None:
 @pytest.mark.parametrize(
     "argv",
     [
-        ["audit-username", "someone"],
         ["show", "some-run-id"],
         ["export", "some-run-id"],
     ],

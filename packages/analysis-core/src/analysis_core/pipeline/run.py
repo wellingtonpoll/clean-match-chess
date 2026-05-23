@@ -20,9 +20,15 @@ from heuristics.complexity_analysis import complexity_score
 from heuristics.engine_correlation import engine_correlation
 from heuristics.regime_shift import regime_shift_score
 from heuristics.scoring import aggregate_score
+from heuristics.scoring.account_profile import build_account_profile
 from heuristics.tactical_detection import tactical_density
 from heuristics.timing_analysis import timing_anomaly
-from shared_types.audit_run import AuditRun, EngineFingerprint, RunMode, RunStatus
+from shared_types.audit_run import (
+    AuditRun,
+    EngineFingerprint,
+    RunMode,
+    RunStatus,
+)
 from shared_types.game import Game, PlayerColor, PlayerRef, Position
 from shared_types.score import SuspicionScore
 from shared_types.signal import HeuristicVersion, SignalAggregate
@@ -94,6 +100,57 @@ def run_single_game(
         persist_manifest(manifest)
 
     return run
+
+
+def run_username_batch(
+    username: str,
+    games: tuple[Game, ...],
+    *,
+    subject: PlayerColor = PlayerColor.WHITE,
+    analyzer: Analyzer | None = None,
+    engine: EngineFingerprint | None = None,
+    heuristics_set: tuple[HeuristicVersion, ...] | None = None,
+    design_system_version: str = DEFAULT_DESIGN_SYSTEM_VERSION,
+    opening_book_sha256: str = DEFAULT_OPENING_BOOK_SHA256,
+    platform: str = "chesscom",
+) -> AuditRun:
+    """Audit a batch of games for one username. Builds AccountProfile."""
+    per_game_runs: list[AuditRun] = []
+    for game in games:
+        per_game_runs.append(
+            run_single_game(
+                game,
+                subject=subject,
+                analyzer=analyzer,
+                engine=engine,
+                heuristics=heuristics_set,
+                design_system_version=design_system_version,
+                opening_book_sha256=opening_book_sha256,
+            )
+        )
+
+    per_game_scores = tuple(r.score for r in per_game_runs if r.score is not None)
+    run_ids = tuple(r.id for r in per_game_runs)
+    profile = build_account_profile(
+        username,
+        per_game_scores,
+        platform=platform,
+        run_ids=run_ids,
+    )
+
+    subject_ref = PlayerRef(color=subject, username=username, subject=True)
+    return AuditRun(
+        id=uuid.uuid4().hex,
+        created_at=datetime.now(UTC),
+        mode=RunMode.USERNAME_BATCH,
+        subject=subject_ref,
+        games=run_ids,
+        engine=engine or _default_engine_fp(),
+        heuristic_set=heuristics_set or _default_heuristics(),
+        score=None,
+        account_profile=profile,
+        status=RunStatus.COMPLETE,
+    )
 
 
 def _analyse_positions(game: Game, analyzer: Analyzer) -> tuple[Position, ...]:

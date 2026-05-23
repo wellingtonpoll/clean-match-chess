@@ -73,7 +73,16 @@ def audit_username(
     debug: bool = typer.Option(False, "--debug"),
 ) -> None:
     """Audit a username's recent public games (batch)."""
-    _not_implemented("audit-username")
+    from cleanmatch_cli.commands.audit_username import execute
+
+    code = execute(
+        username,
+        platform=platform,
+        count=count,
+        time_control=time_control,
+        output=output,
+    )
+    raise typer.Exit(code=code.value)
 
 
 @app.command("show")
