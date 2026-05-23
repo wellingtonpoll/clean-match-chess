@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="{{ language }}">
+<head>
+  <meta charset="utf-8">
+  <title>Clean Match Chess — Audit Report</title>
+  <style>
+    body {
+      font-family: "Inter", "Manrope", system-ui, -apple-system, sans-serif;
+      background: #0B0B0D;
+      color: #F5F5F2;
+      margin: 0;
+      padding: 32px;
+      line-height: 1.5;
+    }
+    h1 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+    h2 { font-size: 24px; font-weight: 600; margin-top: 32px; }
+    .card {
+      background: #171717;
+      border: 1px solid #2A2A2E;
+      border-radius: 24px;
+      padding: 24px;
+      margin: 16px 0;
+    }
+    .metric {
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: #F4D21F;
+    }
+    .risk-low    { color: #A1A1AA; }
+    .risk-medium { color: #F4B41F; }
+    .risk-high   { color: #F4D21F; font-weight: 700; }
+    .muted { color: #A1A1AA; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #2A2A2E; }
+    th { color: #A1A1AA; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <h1>Clean Match Chess — Probabilistic Audit Report</h1>
+  <p class="muted">Run {{ run_id_short }} · Design System {{ design_system_version }} · {{ created_at }}</p>
+
+  <div class="card">
+    <h2>Headline</h2>
+    <p data-role="metric-card-headline">
+      <span class="metric">{{ "%.3f"|format(score) }}</span>
+      <span class="risk-{{ risk_level_class }}">{{ risk_label }}</span>
+    </p>
+    <p class="muted">95% confidence interval: ({{ "%.3f"|format(ci_low) }}, {{ "%.3f"|format(ci_high) }})</p>
+  </div>
+
+  <div class="card">
+    <h2>Summary</h2>
+    <p>{{ summary_paragraph }}</p>
+  </div>
+
+  <div class="card">
+    <h2>Dominant Signals</h2>
+    {% if dominant_signals %}
+      <ul>
+        {% for s in dominant_signals %}<li>{{ s }}</li>{% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No signal carried meaningful weight in this game.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Flagged Segments</h2>
+    {% if flagged_segments %}
+      <table>
+        <thead><tr><th>Phase</th><th>Plies</th><th>Headline</th></tr></thead>
+        <tbody>
+          {% for fs in flagged_segments %}
+          <tr>
+            <td>{{ fs.phase }}</td>
+            <td>{{ fs.start }}&ndash;{{ fs.end }}</td>
+            <td>{{ fs.headline }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="muted">No segments exceeded the elevated-risk threshold.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Reproducibility Manifest</h2>
+    <table>
+      <tr><th>Engine</th><td>{{ engine_name }} {{ engine_version }}</td></tr>
+      <tr><th>Engine binary SHA256</th><td><code>{{ engine_sha }}</code></td></tr>
+      <tr><th>Input PGN SHA256</th><td><code>{{ input_pgn_sha }}</code></td></tr>
+      <tr><th>Opening book SHA256</th><td><code>{{ opening_book_sha }}</code></td></tr>
+      <tr><th>Design system version</th><td>{{ design_system_version }}</td></tr>
+      <tr><th>Analysis core version</th><td>{{ analysis_core_version }}</td></tr>
+    </table>
+  </div>
+
+  <p class="muted" style="margin-top: 32px;">
+    This document is a probabilistic forensic-analytics assessment. It is not
+    an accusation. Conclusions about any individual require human review.
+  </p>
+</body>
+</html>

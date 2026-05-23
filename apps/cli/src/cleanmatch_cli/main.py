@@ -109,7 +109,10 @@ def export(
     include_positions: bool = typer.Option(False, "--include-positions"),
 ) -> None:
     """Export an auditable report bundle for a persisted run."""
-    _not_implemented("export")
+    from cleanmatch_cli.commands.export import execute
+
+    code = execute(run_id, format_=format, out=out, language=language)
+    raise typer.Exit(code=code.value)
 
 
 if __name__ == "__main__":

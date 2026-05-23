@@ -207,25 +207,25 @@ Monorepo (Python uv workspace) — see `plan.md` Project Structure:
 
 ### Tests for User Story 4
 
-- [ ] T078 [P] [US4] Write failing golden-file tests for the HTML render in `packages/report-engine/tests/test_render_html.py` (Jinja2 template against a pinned fixture run)
-- [ ] T079 [P] [US4] Write failing golden-file tests for the JSON render in `packages/report-engine/tests/test_render_json.py`
-- [ ] T080 [P] [US4] Write failing byte-stability test for the PDF render in `packages/report-engine/tests/test_byte_stability.py` (re-render → byte-identical bytes; same architecture)
-- [ ] T081 [P] [US4] Write failing lexical-audit test in `packages/report-engine/tests/test_lexical_audit.py` that loads `tests/fixtures/forbidden-terms/{en,pt}.txt` and asserts every rendered artefact yields zero matches per category + match-mode (SC-008)
-- [ ] T082 [P] [US4] Write failing CLI integration test `apps/cli/tests/integration/test_export.py` covering `--format bundle|pdf|html|json`, `--out` writable validation (exit 1 if not), and bundle structure per `contracts/cli-export.md`
-- [ ] T083 [P] [US4] Write failing cross-architecture tolerance test `tests/e2e/test_cross_arch_tolerance.py` (skipped on single-arch CI; documents ±1 cp / ±0.001 score contract from FR-017)
+- [x] T078 [P] [US4] Write failing golden-file tests for the HTML render in `packages/report-engine/tests/test_render_html.py` (Jinja2 template against a pinned fixture run)
+- [x] T079 [P] [US4] Write failing golden-file tests for the JSON render in `packages/report-engine/tests/test_render_json.py`
+- [x] T080 [P] [US4] Write failing byte-stability test for the PDF render in `packages/report-engine/tests/test_byte_stability.py` (re-render → byte-identical bytes; same architecture)
+- [x] T081 [P] [US4] Write failing lexical-audit test in `packages/report-engine/tests/test_lexical_audit.py` that loads `tests/fixtures/forbidden-terms/{en,pt}.txt` and asserts every rendered artefact yields zero matches per category + match-mode (SC-008)
+- [x] T082 [P] [US4] Write failing CLI integration test `apps/cli/tests/integration/test_export.py` covering `--format bundle|pdf|html|json`, `--out` writable validation (exit 1 if not), and bundle structure per `contracts/cli-export.md`
+- [x] T083 [P] [US4] Write failing cross-architecture tolerance test `tests/e2e/test_cross_arch_tolerance.py` (skipped on single-arch CI; documents ±1 cp / ±0.001 score contract from FR-017)
 
 ### Implementation for User Story 4
 
-- [ ] T084 [P] [US4] Implement Jinja2 templates under `packages/report-engine/src/report_engine/templates/` (`base.html`, `single_game.html`, `account_profile.html`, `manifest.html` partial)
-- [ ] T085 [P] [US4] Implement `packages/report-engine/src/report_engine/render_html.py` (turns T078 green)
-- [ ] T086 [P] [US4] Implement `packages/report-engine/src/report_engine/render_json.py` using Pydantic `model_dump_json` with sorted keys (turns T079 green)
-- [ ] T087 [US4] Implement `packages/report-engine/src/report_engine/render_pdf.py` using WeasyPrint with a pinned `pydyf` version and deterministic metadata (no creation timestamp); depends on T084 (turns T080 green)
-- [ ] T088 [P] [US4] Implement `packages/report-engine/src/report_engine/narrative.py` producing plain-language captions from `Narrative` / `FlaggedSegment` objects; per-language EN + PT (matches MVP language assumption)
-- [ ] T089 [P] [US4] Implement matplotlib-SVG chart producers (timeline, complexity heatmap, eval graph) in `packages/report-engine/src/report_engine/charts.py` (seeded; byte-stable)
-- [ ] T090 [US4] Implement bundling logic (`report.pdf` + `report.html` + `report.json` + `manifest.json` + `README.txt`) in `packages/report-engine/src/report_engine/bundle.py`; depends on T084-T089
-- [ ] T091 [US4] Implement `apps/cli/src/cleanmatch_cli/commands/export.py` per `contracts/cli-export.md`; depends on T090 (turns T082 green)
-- [ ] T092 [US4] Wire the lexical audit into `bundle.py` so an export with a forbidden-term match fails fast with `internal_error` exit 3 (turns T081 green at integration level)
-- [ ] T093 [US4] Run the full US4 test suite
+- [x] T084 [P] [US4] Implement Jinja2 templates under `packages/report-engine/src/report_engine/templates/` (`base.html`, `single_game.html`, `account_profile.html`, `manifest.html` partial)
+- [x] T085 [P] [US4] Implement `packages/report-engine/src/report_engine/render_html.py` (turns T078 green)
+- [x] T086 [P] [US4] Implement `packages/report-engine/src/report_engine/render_json.py` using Pydantic `model_dump_json` with sorted keys (turns T079 green)
+- [x] T087 [US4] Implement `packages/report-engine/src/report_engine/render_pdf.py` using WeasyPrint with a pinned `pydyf` version and deterministic metadata (no creation timestamp); depends on T084 (turns T080 green)
+- [x] T088 [P] [US4] Implement `packages/report-engine/src/report_engine/narrative.py` producing plain-language captions from `Narrative` / `FlaggedSegment` objects; per-language EN + PT (matches MVP language assumption)
+- [x] T089 [P] [US4] Implement matplotlib-SVG chart producers (timeline, complexity heatmap, eval graph) in `packages/report-engine/src/report_engine/charts.py` (seeded; byte-stable)
+- [x] T090 [US4] Implement bundling logic (`report.pdf` + `report.html` + `report.json` + `manifest.json` + `README.txt`) in `packages/report-engine/src/report_engine/bundle.py`; depends on T084-T089
+- [x] T091 [US4] Implement `apps/cli/src/cleanmatch_cli/commands/export.py` per `contracts/cli-export.md`; depends on T090 (turns T082 green)
+- [x] T092 [US4] Wire the lexical audit into `bundle.py` so an export with a forbidden-term match fails fast with `internal_error` exit 3 (turns T081 green at integration level)
+- [x] T093 [US4] Run the full US4 test suite
 
 **Checkpoint**: All user stories independently functional. MVP is shippable.
 
@@ -235,16 +235,16 @@ Monorepo (Python uv workspace) — see `plan.md` Project Structure:
 
 **Purpose**: Performance budgets, packaging, observability, infra.
 
-- [ ] T094 [P] Add performance benchmarks per constitution Principle IV in `packages/analysis-core/benchmarks/`: per-ply engine analysis ≤ 2.0 s @ depth 18 (`bench_engine_analysis.py`), 100-game chess.com ingest ≤ 5 s (`bench_chesscom_ingest.py`), 200-game RSS ≤ 1.5 GB (`bench_memory.py`)
-- [ ] T095 [P] Add report-render benchmarks: ≤ 3 s p95 HTML and ≤ 8 s p95 PDF for a 50-game report in `packages/report-engine/benchmarks/bench_render.py`
-- [ ] T096 [P] Wire benchmarks into CI as a separate job that runs on labelled PRs; regressions > 10% fail the job (per constitution Principle IV)
-- [ ] T097 [P] Build `infra/docker/stockfish.Dockerfile` (pinned Stockfish 16.1 binary + SHA256 verification)
-- [ ] T098 [P] Build `infra/docker/cleanmatch.Dockerfile` (multi-stage: uv build → slim runtime with Stockfish 16.1)
-- [ ] T099 [P] Add `infra/compose/dev.yml` declaring Redis + Postgres services for future Phase 3 work (not required by MVP but reserved per plan)
-- [ ] T100 [P] Add a `cleanmatch` console-script entry point in `apps/cli/pyproject.toml` so `pipx install` works end-to-end
-- [ ] T101 [P] Documentation pass: ensure `specs/001-fairplay-analysis/quickstart.md` matches the actual install flow; add `docs/heuristics.md` summarising each signal module's owner, version, and changelog pointer (RNF-07)
-- [ ] T102 [P] Add a PR template at `.github/pull_request_template.md` requiring (a) constitution principle check, (b) benchmark or budget-change note for changes under `packages/{analysis-core,heuristics,report-engine}`
-- [ ] T103 Run the full test + benchmark suite, capture the coverage report, and update the README badge / quickstart with the actual reference numbers
+- [x] T094 [P] Add performance benchmarks per constitution Principle IV in `packages/analysis-core/benchmarks/`: per-ply engine analysis ≤ 2.0 s @ depth 18 (`bench_engine_analysis.py`), 100-game chess.com ingest ≤ 5 s (`bench_chesscom_ingest.py`), 200-game RSS ≤ 1.5 GB (`bench_memory.py`)
+- [x] T095 [P] Add report-render benchmarks: ≤ 3 s p95 HTML and ≤ 8 s p95 PDF for a 50-game report in `packages/report-engine/benchmarks/bench_render.py`
+- [x] T096 [P] Wire benchmarks into CI as a separate job that runs on labelled PRs; regressions > 10% fail the job (per constitution Principle IV)
+- [x] T097 [P] Build `infra/docker/stockfish.Dockerfile` (pinned Stockfish 16.1 binary + SHA256 verification)
+- [x] T098 [P] Build `infra/docker/cleanmatch.Dockerfile` (multi-stage: uv build → slim runtime with Stockfish 16.1)
+- [x] T099 [P] Add `infra/compose/dev.yml` declaring Redis + Postgres services for future Phase 3 work (not required by MVP but reserved per plan)
+- [x] T100 [P] Add a `cleanmatch` console-script entry point in `apps/cli/pyproject.toml` so `pipx install` works end-to-end
+- [x] T101 [P] Documentation pass: ensure `specs/001-fairplay-analysis/quickstart.md` matches the actual install flow; add `docs/heuristics.md` summarising each signal module's owner, version, and changelog pointer (RNF-07)
+- [x] T102 [P] Add a PR template at `.github/pull_request_template.md` requiring (a) constitution principle check, (b) benchmark or budget-change note for changes under `packages/{analysis-core,heuristics,report-engine}`
+- [x] T103 Run the full test + benchmark suite, capture the coverage report, and update the README badge / quickstart with the actual reference numbers
 
 ---
 

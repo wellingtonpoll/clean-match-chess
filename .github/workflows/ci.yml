@@ -39,3 +39,27 @@ jobs:
 
       - name: Tests (pytest + coverage)
         run: uv run pytest --cov --cov-fail-under=85
+
+  benchmarks:
+    if: contains(github.event.pull_request.labels.*.name, 'benchmark')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: test
+    env:
+      CLEANMATCH_BENCH: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.11.5"
+      - run: uv python install 3.11
+      - run: uv sync --all-packages --all-extras --dev
+      - name: Run benchmark suite
+        run: |
+          uv run pytest -m benchmark \
+            packages/analysis-core/benchmarks \
+            packages/report-engine/benchmarks \
+            --benchmark-only \
+            --benchmark-save=ci \
+            --benchmark-fail=min:1.10
+

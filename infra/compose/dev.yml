@@ -1,0 +1,37 @@
+# Local-dev compose stack (T099).
+#
+# Spins up Redis + Postgres so Phase 3 (web platform) backend work can
+# start without ad-hoc setup. The MVP CLI does NOT depend on these
+# services — they exist solely to let the Phase 3 feature land cleanly.
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cleanmatch
+      POSTGRES_PASSWORD: cleanmatch-dev
+      POSTGRES_DB: cleanmatch_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - cleanmatch_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cleanmatch -d cleanmatch_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  cleanmatch_pgdata: {}

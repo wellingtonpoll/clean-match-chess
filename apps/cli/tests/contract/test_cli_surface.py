@@ -36,18 +36,6 @@ def test_subcommand_help_succeeds(argv: list[str]) -> None:
     assert r.exit_code == ExitCode.SUCCESS.value
 
 
-@pytest.mark.parametrize(
-    "argv",
-    [
-        ["export", "some-run-id"],
-    ],
-)
-def test_subcommand_stub_exits_user_error(argv: list[str]) -> None:
-    r = runner.invoke(app, argv)
-    assert r.exit_code == ExitCode.USER_ERROR.value
-    assert "not implemented yet" in r.output
-
-
 def test_for_error_code_mapping() -> None:
     assert for_error_code("user_error") is ExitCode.USER_ERROR
     assert for_error_code("upstream_error") is ExitCode.UPSTREAM_ERROR

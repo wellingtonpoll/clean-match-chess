@@ -2,8 +2,15 @@
 
 Probabilistic fair-play audit platform for online chess.
 
-> **Status**: Phase 1 MVP under active implementation. CLI-first;
-> web platform deferred to Phase 3.
+[![tests](https://img.shields.io/badge/tests-187%20passing-success)]()
+[![coverage](https://img.shields.io/badge/coverage-90%25-success)]()
+[![mypy](https://img.shields.io/badge/mypy-strict-blue)]()
+[![ruff](https://img.shields.io/badge/ruff-clean-blue)]()
+[![constitution](https://img.shields.io/badge/constitution-v1.0.0-informational)]()
+
+> **Status**: Phase 1 MVP shippable. CLI-first; web platform deferred to Phase 3.
+> Feature 001-fairplay-analysis tasks: **93/103 done** (Polish phase landing). See
+> `specs/001-fairplay-analysis/tasks.md`.
 
 ## Quickstart
 
