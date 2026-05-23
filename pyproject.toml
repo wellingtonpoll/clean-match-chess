@@ -18,6 +18,7 @@ dev = [
 members = [
     "apps/cli",
     "packages/analysis-core",
+    "packages/design-system",
     "packages/heuristics",
     "packages/report-engine",
     "packages/shared-types",
@@ -26,6 +27,7 @@ members = [
 [tool.uv.sources]
 shared-types = { workspace = true }
 analysis-core = { workspace = true }
+design-system = { workspace = true }
 heuristics = { workspace = true }
 report-engine = { workspace = true }
 cleanmatch-cli = { workspace = true }
@@ -48,8 +50,10 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"**/tests/**" = ["S101", "S105", "S106", "S108", "ARG"]
+"**/tests/**" = ["S101", "S105", "S106", "S108", "ARG", "B017", "RUF043"]
 "apps/cli/src/cleanmatch_cli/main.py" = ["B008", "A002", "ARG001"]
+"packages/design-system/src/design_system/audits/report.py" = ["S105"]
+"packages/design-system/src/design_system/components/risk_treatments.py" = ["S106"]
 
 [tool.mypy]
 python_version = "3.11"
@@ -60,13 +64,14 @@ no_implicit_optional = true
 files = [
     "apps/cli/src",
     "packages/analysis-core/src",
+    "packages/design-system/src",
     "packages/heuristics/src",
     "packages/report-engine/src",
     "packages/shared-types/src",
 ]
 
 [[tool.mypy.overrides]]
-module = ["chess.*", "stockfish.*", "weasyprint.*", "pdfminer.*"]
+module = ["chess.*", "stockfish.*", "weasyprint.*", "pdfminer.*", "colormath.*", "tinycss2.*", "selectolax.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
@@ -74,6 +79,7 @@ minversion = "8.0"
 testpaths = [
     "apps/cli/tests",
     "packages/analysis-core/tests",
+    "packages/design-system/tests",
     "packages/heuristics/tests",
     "packages/report-engine/tests",
     "packages/shared-types/tests",
@@ -83,6 +89,10 @@ markers = [
     "slow: tests that exercise real Stockfish or do heavy work",
     "benchmark: performance regression tests",
     "e2e: cross-package end-to-end tests",
+    "audit_palette: design-system palette audit",
+    "audit_typography: design-system typography audit",
+    "audit_motion: design-system motion audit",
+    "audit_lexical: design-system lexical audit",
 ]
 addopts = "--strict-markers --import-mode=importlib"
 filterwarnings = [
@@ -94,6 +104,7 @@ branch = true
 source = [
     "apps/cli/src",
     "packages/analysis-core/src",
+    "packages/design-system/src",
     "packages/heuristics/src",
     "packages/report-engine/src",
     "packages/shared-types/src",

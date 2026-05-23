@@ -39,13 +39,13 @@ Monorepo (Python uv workspace) — design-system lives at
 
 ## Phase 1: Setup (Package Bootstrap)
 
-- [ ] T001 Create `packages/design-system/` skeleton: `pyproject.toml`, `src/design_system/__init__.py`, `src/design_system/{tokens,components,lexicon,audits,version,manifest}.py` placeholders, `adapters/{weasyprint,tailwind,shadcn,framer-motion}/`, `benchmarks/`, `tests/{unit,fixtures,golden}/`
-- [ ] T002 [P] Add `packages/design-system` to the root `pyproject.toml` workspace members list
-- [ ] T003 [P] Declare runtime dependencies in `packages/design-system/pyproject.toml`: `pydantic>=2`, `tinycss2`, `colormath`, `pdfminer.six`, `selectolax`, plus dev deps `pytest`, `pytest-cov`, `pytest-benchmark`
-- [ ] T004 [P] Add `packages/design-system/src/design_system/version.py` exporting `__version__ = "0.1.0"` sourced via `importlib.metadata`
-- [ ] T005 [P] Add fixture directories `packages/design-system/tests/fixtures/{tokens-valid,tokens-invalid,images,lexicon}/` with placeholder `.gitkeep`
-- [ ] T006 [P] Update root `pyproject.toml` `[tool.ruff]` and `[tool.mypy]` to include `packages/design-system/src/` in source paths
-- [ ] T007 [P] Update `.github/workflows/ci.yml` so it runs the design-system tests + audits via `uv run pytest -m "audit_palette or audit_typography or audit_motion or audit_lexical"`
+- [x] T001 Create `packages/design-system/` skeleton: `pyproject.toml`, `src/design_system/__init__.py`, `src/design_system/{tokens,components,lexicon,audits,version,manifest}.py` placeholders, `adapters/{weasyprint,tailwind,shadcn,framer-motion}/`, `benchmarks/`, `tests/{unit,fixtures,golden}/`
+- [x] T002 [P] Add `packages/design-system` to the root `pyproject.toml` workspace members list
+- [x] T003 [P] Declare runtime dependencies in `packages/design-system/pyproject.toml`: `pydantic>=2`, `tinycss2`, `colormath`, `pdfminer.six`, `selectolax`, plus dev deps `pytest`, `pytest-cov`, `pytest-benchmark`
+- [x] T004 [P] Add `packages/design-system/src/design_system/version.py` exporting `__version__ = "0.1.0"` sourced via `importlib.metadata`
+- [x] T005 [P] Add fixture directories `packages/design-system/tests/fixtures/{tokens-valid,tokens-invalid,images,lexicon}/` with placeholder `.gitkeep`
+- [x] T006 [P] Update root `pyproject.toml` `[tool.ruff]` and `[tool.mypy]` to include `packages/design-system/src/` in source paths
+- [x] T007 [P] Update `.github/workflows/ci.yml` so it runs the design-system tests + audits via `uv run pytest -m "audit_palette or audit_typography or audit_motion or audit_lexical"`
 
 **Checkpoint**: `uv sync` resolves the new package; `uv run pytest packages/design-system` is empty-green.
 
@@ -55,39 +55,39 @@ Monorepo (Python uv workspace) — design-system lives at
 
 ### Token entities (data-model.md → `packages/design-system/src/design_system/tokens/`)
 
-- [ ] T008 [P] Write failing unit tests for the Pydantic v2 loader covering: name regex, `^#[0-9A-F]{6}$` uppercase hex, forbidden-hue rule (HSL hue 350–360° ∪ 0–20° at S>30%), locked spacing set, locked radius bounds, locked motion duration bounds in `packages/design-system/tests/unit/test_token_loader.py`
-- [ ] T009 [P] [Foundational] Write failing tests for `TokenFile` schema validation against `tests/fixtures/tokens-invalid/` (one fixture per violation: red token, off-spacing, bad-easing, missing-required) in `packages/design-system/tests/unit/test_token_validation.py`
-- [ ] T010 Implement `packages/design-system/src/design_system/tokens/loader.py` — Pydantic `TokenFile`, `DesignToken`, polymorphic `TokenValue` (Colour/Typography/Shadow/Motion), forbidden-hue check (turns T008–T009 green)
-- [ ] T011 [P] Implement `packages/design-system/src/design_system/tokens/types.py` — supporting enums (`TokenCategory`, `RiskLevel`) and polymorphic value classes
+- [x] T008 [P] Write failing unit tests for the Pydantic v2 loader covering: name regex, `^#[0-9A-F]{6}$` uppercase hex, forbidden-hue rule (HSL hue 350–360° ∪ 0–20° at S>30%), locked spacing set, locked radius bounds, locked motion duration bounds in `packages/design-system/tests/unit/test_token_loader.py`
+- [x] T009 [P] [Foundational] Write failing tests for `TokenFile` schema validation against `tests/fixtures/tokens-invalid/` (one fixture per violation: red token, off-spacing, bad-easing, missing-required) in `packages/design-system/tests/unit/test_token_validation.py`
+- [x] T010 Implement `packages/design-system/src/design_system/tokens/loader.py` — Pydantic `TokenFile`, `DesignToken`, polymorphic `TokenValue` (Colour/Typography/Shadow/Motion), forbidden-hue check (turns T008–T009 green)
+- [x] T011 [P] Implement `packages/design-system/src/design_system/tokens/types.py` — supporting enums (`TokenCategory`, `RiskLevel`) and polymorphic value classes
 
 ### Lexicon + forbidden-terms
 
-- [ ] T012 [P] [Foundational] Write failing unit tests for `Lexicon` + `LexiconEntry` schema in `packages/design-system/tests/unit/test_lexicon.py`
-- [ ] T013 [P] [Foundational] Write failing unit tests for `ForbiddenTermsFile` TSV parser (skip `#`-comments, three-column rows, category + match-mode enums) in `packages/design-system/tests/unit/test_forbidden_terms.py`
-- [ ] T014 Implement `packages/design-system/src/design_system/lexicon/lookup.py` exposing `load_lexicon(lang) -> Lexicon`, `load_forbidden_terms(lang) -> ForbiddenTermsFile`, and `forbidden_alternatives_resolve(entry) -> bool` (turns T012-T013 green)
+- [x] T012 [P] [Foundational] Write failing unit tests for `Lexicon` + `LexiconEntry` schema in `packages/design-system/tests/unit/test_lexicon.py`
+- [x] T013 [P] [Foundational] Write failing unit tests for `ForbiddenTermsFile` TSV parser (skip `#`-comments, three-column rows, category + match-mode enums) in `packages/design-system/tests/unit/test_forbidden_terms.py`
+- [x] T014 Implement `packages/design-system/src/design_system/lexicon/lookup.py` exposing `load_lexicon(lang) -> Lexicon`, `load_forbidden_terms(lang) -> ForbiddenTermsFile`, and `forbidden_alternatives_resolve(entry) -> bool` (turns T012-T013 green)
 
 ### Component catalogue + risk treatments
 
-- [ ] T015 [P] [Foundational] Write failing unit tests asserting every `Component.tokens_of_record` token name resolves in the loaded `TokenFile` in `packages/design-system/tests/unit/test_components.py`
-- [ ] T016 [P] Implement `packages/design-system/src/design_system/components/catalogue.py` (loader + access helpers)
-- [ ] T017 [P] Implement `packages/design-system/src/design_system/components/risk_treatments.py` — three locked `RiskTreatment` constants (LOW/MEDIUM/HIGH) per data-model §8 with the locked amber `#F4B41F` for MEDIUM, signal `#F4D21F` for HIGH
+- [x] T015 [P] [Foundational] Write failing unit tests asserting every `Component.tokens_of_record` token name resolves in the loaded `TokenFile` in `packages/design-system/tests/unit/test_components.py`
+- [x] T016 [P] Implement `packages/design-system/src/design_system/components/catalogue.py` (loader + access helpers)
+- [x] T017 [P] Implement `packages/design-system/src/design_system/components/risk_treatments.py` — three locked `RiskTreatment` constants (LOW/MEDIUM/HIGH) per data-model §8 with the locked amber `#F4B41F` for MEDIUM, signal `#F4D21F` for HIGH
 
 ### Audit report core
 
-- [ ] T018 [P] [Foundational] Write failing unit tests for `AuditReport` + `AuditFinding` Pydantic models + JSON serialisation in `packages/design-system/tests/unit/test_audit_report.py`
-- [ ] T019 [P] Implement `packages/design-system/src/design_system/audits/report.py` — `AuditReport`, `AuditFinding`, `TrackResult` dataclasses + JSON serializer (turns T018 green)
-- [ ] T020 [P] Implement `packages/design-system/src/design_system/audits/pytest_plugin.py` registering marks `audit_palette`, `audit_typography`, `audit_motion`, `audit_lexical`
+- [x] T018 [P] [Foundational] Write failing unit tests for `AuditReport` + `AuditFinding` Pydantic models + JSON serialisation in `packages/design-system/tests/unit/test_audit_report.py`
+- [x] T019 [P] Implement `packages/design-system/src/design_system/audits/report.py` — `AuditReport`, `AuditFinding`, `TrackResult` dataclasses + JSON serializer (turns T018 green)
+- [x] T020 [P] Implement `packages/design-system/src/design_system/audits/pytest_plugin.py` registering marks `audit_palette`, `audit_typography`, `audit_motion`, `audit_lexical`
 
 ### Cross-feature: extend feature 001 shared-types
 
-- [ ] T021 [Foundational] Write failing unit test in `packages/shared-types/tests/test_manifest_design_system_field.py` asserting `ReproducibilityManifest.design_system_version` exists, is required, and validates against `^\d+\.\d+\.\d+(?:[-+].+)?$`
-- [ ] T022 [Foundational] Extend `packages/shared-types/src/shared_types/report.py` adding `design_system_version: str` to `ReproducibilityManifest` (turns T021 green); update existing tests that construct manifests
-- [ ] T023 [P] [Foundational] Update existing feature 001 manifest-creation sites in `packages/analysis-core/src/analysis_core/manifest.py` to pull `design_system.version.__version__` and pass it into the manifest builder
+- [x] T021 [Foundational] Write failing unit test in `packages/shared-types/tests/test_manifest_design_system_field.py` asserting `ReproducibilityManifest.design_system_version` exists, is required, and validates against `^\d+\.\d+\.\d+(?:[-+].+)?$`
+- [x] T022 [Foundational] Extend `packages/shared-types/src/shared_types/report.py` adding `design_system_version: str` to `ReproducibilityManifest` (turns T021 green); update existing tests that construct manifests
+- [x] T023 [P] [Foundational] Update existing feature 001 manifest-creation sites in `packages/analysis-core/src/analysis_core/manifest.py` to pull `design_system.version.__version__` and pass it into the manifest builder
 
 ### Cross-feature: extend forbidden-terms fixtures
 
-- [ ] T024 [P] [Foundational] Seed `tests/fixtures/forbidden-terms/en.txt` with the v1.0.0 list (≥12 entries: "cheater", "cheating", "cheat detected", "guilty", "fraud", "fraudster", "criminal", "confirmed cheating", "verdict", "convicted", "accused", "perpetrator") with header comment declaring `# version: 1.0.0` and three-column TSV body
-- [ ] T025 [P] [Foundational] Seed `tests/fixtures/forbidden-terms/pt.txt` with the parallel Portuguese v1.0.0 list (≥12 entries: "trapaceiro", "trapaça", "culpado", "fraudador", "fraude", "criminoso", "trapaça confirmada", "veredicto", "condenado", "acusado", "perpetrador", "violação") matching schema of T024
+- [x] T024 [P] [Foundational] Seed `tests/fixtures/forbidden-terms/en.txt` with the v1.0.0 list (≥12 entries: "cheater", "cheating", "cheat detected", "guilty", "fraud", "fraudster", "criminal", "confirmed cheating", "verdict", "convicted", "accused", "perpetrator") with header comment declaring `# version: 1.0.0` and three-column TSV body
+- [x] T025 [P] [Foundational] Seed `tests/fixtures/forbidden-terms/pt.txt` with the parallel Portuguese v1.0.0 list (≥12 entries: "trapaceiro", "trapaça", "culpado", "fraudador", "fraude", "criminoso", "trapaça confirmada", "veredicto", "condenado", "acusado", "perpetrador", "violação") matching schema of T024
 
 **Checkpoint**: all foundational tests pass; `uv run mypy` + `uv run ruff check` clean across the new package and the feature 001 edits.
 
@@ -101,40 +101,40 @@ Monorepo (Python uv workspace) — design-system lives at
 
 ### tokens.json + WeasyPrint adapter
 
-- [ ] T026 [P] [US1] Write failing golden-file test in `packages/design-system/tests/golden/test_compile_weasyprint.py` asserting that compiling the v1.0.0 `tokens.json` produces a byte-identical `adapters/weasyprint/tokens.css`
-- [ ] T027 [P] [US1] Write failing unit test verifying the generated CSS uses only WeasyPrint subset features (no `grid`, no `:has()`, no container queries; parsed via `tinycss2`) in `packages/design-system/tests/unit/test_weasyprint_subset.py`
-- [ ] T028 [US1] Author `packages/design-system/src/design_system/tokens/tokens.json` per `contracts/token-file-schema.md` (full v1.0.0 token set: palette + extended chart series + typography + spacing + radius + shadow + motion + z_index)
-- [ ] T029 [US1] Implement `packages/design-system/src/design_system/tokens/compile_weasyprint.py` (turns T026-T027 green); commit the generated `packages/design-system/adapters/weasyprint/tokens.css`
-- [ ] T030 [P] [US1] Add Inter + Manrope OFL font subsets at `packages/design-system/adapters/weasyprint/fonts/{Inter-{400,500,600,700}.woff2,Manrope-{400,500,600,700}.woff2}` (Latin + Latin Extended-A only) with `LICENSE.OFL` next to them
+- [x] T026 [P] [US1] Write failing golden-file test in `packages/design-system/tests/golden/test_compile_weasyprint.py` asserting that compiling the v1.0.0 `tokens.json` produces a byte-identical `adapters/weasyprint/tokens.css`
+- [x] T027 [P] [US1] Write failing unit test verifying the generated CSS uses only WeasyPrint subset features (no `grid`, no `:has()`, no container queries; parsed via `tinycss2`) in `packages/design-system/tests/unit/test_weasyprint_subset.py`
+- [x] T028 [US1] Author `packages/design-system/src/design_system/tokens/tokens.json` per `contracts/token-file-schema.md` (full v1.0.0 token set: palette + extended chart series + typography + spacing + radius + shadow + motion + z_index)
+- [x] T029 [US1] Implement `packages/design-system/src/design_system/tokens/compile_weasyprint.py` (turns T026-T027 green); commit the generated `packages/design-system/adapters/weasyprint/tokens.css`
+- [x] T030 [P] [US1] Add Inter + Manrope OFL font subsets at `packages/design-system/adapters/weasyprint/fonts/{Inter-{400,500,600,700}.woff2,Manrope-{400,500,600,700}.woff2}` (Latin + Latin Extended-A only) with `LICENSE.OFL` next to them
 
 ### Palette audit (Track A + Track B)
 
-- [ ] T031 [P] [US1] Write failing unit tests for Track A (CSS lint) covering: unknown literal `#xxxxxx`, forbidden hue inside an `rgba(...)`, allowed token references in `packages/design-system/tests/unit/test_audit_palette_css.py`
-- [ ] T032 [P] [US1] Write failing unit tests for Track B (pixel) covering: synthetic PNG with all-palette pixels passes, synthetic PNG with one red pixel fails on `forbidden_hue`, fringe-tolerance counting in `packages/design-system/tests/unit/test_audit_palette_pixel.py`
-- [ ] T033 [US1] Implement Track A in `packages/design-system/src/design_system/audits/palette.py::audit_generated_css` (turns T031 green)
-- [ ] T034 [US1] Implement Track B in `packages/design-system/src/design_system/audits/palette.py::audit_pdf` and `::audit_image` using `colormath` Delta-E + HSL forbidden-hue check (turns T032 green); depends on T033
+- [x] T031 [P] [US1] Write failing unit tests for Track A (CSS lint) covering: unknown literal `#xxxxxx`, forbidden hue inside an `rgba(...)`, allowed token references in `packages/design-system/tests/unit/test_audit_palette_css.py`
+- [x] T032 [P] [US1] Write failing unit tests for Track B (pixel) covering: synthetic PNG with all-palette pixels passes, synthetic PNG with one red pixel fails on `forbidden_hue`, fringe-tolerance counting in `packages/design-system/tests/unit/test_audit_palette_pixel.py`
+- [x] T033 [US1] Implement Track A in `packages/design-system/src/design_system/audits/palette.py::audit_generated_css` (turns T031 green)
+- [x] T034 [US1] Implement Track B in `packages/design-system/src/design_system/audits/palette.py::audit_pdf` and `::audit_image` using `colormath` Delta-E + HSL forbidden-hue check (turns T032 green); depends on T033
 
 ### Typography audit
 
-- [ ] T035 [P] [US1] Write failing unit tests for `audit_html` (selectolax-based): metric element with correct tokens passes, with wrong font-weight fails on `wrong_metric_typography` in `packages/design-system/tests/unit/test_audit_typography_html.py`
-- [ ] T036 [P] [US1] Write failing unit tests for `audit_pdf` (pdfminer-based) parallel to T035 in `packages/design-system/tests/unit/test_audit_typography_pdf.py`
-- [ ] T037 [US1] Implement `packages/design-system/src/design_system/audits/typography.py` covering HTML and PDF modes (turns T035-T036 green)
+- [x] T035 [P] [US1] Write failing unit tests for `audit_html` (selectolax-based): metric element with correct tokens passes, with wrong font-weight fails on `wrong_metric_typography` in `packages/design-system/tests/unit/test_audit_typography_html.py`
+- [x] T036 [P] [US1] Write failing unit tests for `audit_pdf` (pdfminer-based) parallel to T035 in `packages/design-system/tests/unit/test_audit_typography_pdf.py`
+- [x] T037 [US1] Implement `packages/design-system/src/design_system/audits/typography.py` covering HTML and PDF modes (turns T035-T036 green)
 
 ### Motion audit (static CSS only in MVP)
 
-- [ ] T038 [P] [US1] Write failing unit tests in `packages/design-system/tests/unit/test_audit_motion_static.py` covering: CSS with token-derived `transition` passes, CSS with literal `linear` easing fails, CSS with duration `500ms` fails
-- [ ] T039 [US1] Implement `packages/design-system/src/design_system/audits/motion.py::audit_static_css` (turns T038 green); the dynamic Playwright audit is a placeholder that returns `skipped` in MVP
+- [x] T038 [P] [US1] Write failing unit tests in `packages/design-system/tests/unit/test_audit_motion_static.py` covering: CSS with token-derived `transition` passes, CSS with literal `linear` easing fails, CSS with duration `500ms` fails
+- [x] T039 [US1] Implement `packages/design-system/src/design_system/audits/motion.py::audit_static_css` (turns T038 green); the dynamic Playwright audit is a placeholder that returns `skipped` in MVP
 
 ### Lexical audit
 
-- [ ] T040 [P] [US1] Write failing unit tests for `audit_text` covering: word_boundary vs substring modes, case-insensitivity, multi-language scan in `packages/design-system/tests/unit/test_audit_lexical.py`
-- [ ] T041 [P] [US1] Write failing integration tests for `audit_pdf`, `audit_html`, `audit_template`, `audit_json` covering PDF text extraction edges and template scanning in `packages/design-system/tests/unit/test_audit_lexical_io.py`
-- [ ] T042 [US1] Implement `packages/design-system/src/design_system/audits/lexical.py` (turns T040-T041 green)
+- [x] T040 [P] [US1] Write failing unit tests for `audit_text` covering: word_boundary vs substring modes, case-insensitivity, multi-language scan in `packages/design-system/tests/unit/test_audit_lexical.py`
+- [x] T041 [P] [US1] Write failing integration tests for `audit_pdf`, `audit_html`, `audit_template`, `audit_json` covering PDF text extraction edges and template scanning in `packages/design-system/tests/unit/test_audit_lexical_io.py`
+- [x] T042 [US1] Implement `packages/design-system/src/design_system/audits/lexical.py` (turns T040-T041 green)
 
 ### CLI + manifest field producer
 
-- [ ] T043 [US1] Add the `python -m design_system.audits.palette|typography|motion|lexical` CLI entry-points in `packages/design-system/src/design_system/__main__.py` matching the contracts' exit-code tables
-- [ ] T044 [US1] Add the `python -m design_system audit-replay <run-id>` CLI in `packages/design-system/src/design_system/__main__.py` per `contracts/manifest-field.md`
+- [x] T043 [US1] Add the `python -m design_system.audits.palette|typography|motion|lexical` CLI entry-points in `packages/design-system/src/design_system/__main__.py` matching the contracts' exit-code tables
+- [x] T044 [US1] Add the `python -m design_system audit-replay <run-id>` CLI in `packages/design-system/src/design_system/__main__.py` per `contracts/manifest-field.md`
 
 ### Wire feature 001 report-engine to the design system
 

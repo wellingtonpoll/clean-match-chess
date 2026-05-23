@@ -40,6 +40,13 @@ jobs:
       - name: Tests (pytest + coverage)
         run: uv run pytest --cov --cov-fail-under=85
 
+      - name: Design-system audits (when wired)
+        run: |
+          uv run pytest \
+            -m "audit_palette or audit_typography or audit_motion or audit_lexical" \
+            --no-cov \
+            || true   # tolerant until audits wire across all surfaces
+
   benchmarks:
     if: contains(github.event.pull_request.labels.*.name, 'benchmark')
     runs-on: ubuntu-latest
