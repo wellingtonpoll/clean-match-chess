@@ -49,11 +49,22 @@ def audit_game(
     language: str = typer.Option("en", "--language"),
     no_cache: bool = typer.Option(False, "--no-cache"),
     debug: bool = typer.Option(False, "--debug"),
+    engine_path: str | None = typer.Option(
+        None, "--engine-path",
+        help="Path to local Stockfish binary (e.g. /usr/bin/stockfish).",
+    ),
+    engine_image: str | None = typer.Option(
+        None, "--engine-image",
+        help="Podman/Docker image with Stockfish. Runs via 'podman run --rm -i'.",
+    ),
 ) -> None:
     """Audit a single PGN (single-game probabilistic analysis)."""
     from cleanmatch_cli.commands.audit_game import execute
 
-    code = execute(input, subject=subject, output=output)
+    code = execute(
+        input, subject=subject, output=output,
+        engine_path=engine_path, engine_image=engine_image,
+    )
     raise typer.Exit(code=code.value)
 
 
@@ -71,6 +82,14 @@ def audit_username(
     no_cache: bool = typer.Option(False, "--no-cache"),
     max_concurrency: int | None = typer.Option(None, "--max-concurrency", min=1),
     debug: bool = typer.Option(False, "--debug"),
+    engine_path: str | None = typer.Option(
+        None, "--engine-path",
+        help="Path to local Stockfish binary (e.g. /usr/bin/stockfish).",
+    ),
+    engine_image: str | None = typer.Option(
+        None, "--engine-image",
+        help="Podman/Docker image with Stockfish (e.g. cleanmatch-stockfish:quick).",
+    ),
 ) -> None:
     """Audit a username's recent public games (batch)."""
     from cleanmatch_cli.commands.audit_username import execute
@@ -81,6 +100,8 @@ def audit_username(
         count=count,
         time_control=time_control,
         output=output,
+        engine_path=engine_path,
+        engine_image=engine_image,
     )
     raise typer.Exit(code=code.value)
 
