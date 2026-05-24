@@ -94,8 +94,13 @@ jobs:
       - name: Design-system audits (enforced)
         run: |
           uv run pytest \
-            packages/design-system/tests/ \
-            -m "audit_palette or audit_typography or audit_motion or audit_lexical" \
+            packages/design-system/tests/unit/test_audit_palette.py \
+            packages/design-system/tests/unit/test_audit_palette_risk.py \
+            packages/design-system/tests/unit/test_audit_typography.py \
+            packages/design-system/tests/unit/test_audit_typography_role.py \
+            packages/design-system/tests/unit/test_audit_motion.py \
+            packages/design-system/tests/unit/test_audit_motion_dynamic.py \
+            packages/design-system/tests/unit/test_audit_lexical.py \
             --no-cov
 
   sc007_onboarding_log:
@@ -121,8 +126,13 @@ jobs:
             exit 0
           fi
           uv run pytest \
-            packages/design-system/tests/ \
-            -m "audit_palette or audit_typography or audit_motion or audit_lexical" \
+            packages/design-system/tests/unit/test_audit_palette.py \
+            packages/design-system/tests/unit/test_audit_palette_risk.py \
+            packages/design-system/tests/unit/test_audit_typography.py \
+            packages/design-system/tests/unit/test_audit_typography_role.py \
+            packages/design-system/tests/unit/test_audit_motion.py \
+            packages/design-system/tests/unit/test_audit_motion_dynamic.py \
+            packages/design-system/tests/unit/test_audit_lexical.py \
             --no-cov
       - name: Emit SC007 structured log line
         if: always()
