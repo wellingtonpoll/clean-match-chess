@@ -1,0 +1,7 @@
+{
+  "source": "synthetic-smoke-fixture-feature-005",
+  "retrieved_at": "2026-05-24T00:00:00Z",
+  "label": "engine_assisted",
+  "label_confidence": "high",
+  "notes": "Hand-crafted minimal PGN for FPR-gate unit tests. Lichess circularity caveat does NOT apply (synthetic fixture, not from a real flagged account)."
+}

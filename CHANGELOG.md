@@ -9,7 +9,41 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added
+### Added — Feature 005 (Scoring v2 Phase 2)
+
+- `AuditRun.manifest` optional field — `ReproducibilityManifest` is now
+  attached in-band to every audit output, so consumers no longer need a
+  separate `manifest.json` read for provenance (FR-003, US4).
+- Labeled-corpus FPR-gate test target at `tests/fpr_gate/test_fpr_gate.py`
+  with helpers (`provenance.py`, `cache.py`, `gate.py`). Test asserts
+  **FPR ≤ 2.0%** on a clean corpus and **TPR ≥ 80.0%** on an
+  engine-assisted corpus at the `RISK_HIGH_MIN` decision threshold
+  (FR-006, FR-007, SC-003).
+- Per-fixture engine-analysis cache under `tests/fixtures/corpora/.cache/`
+  (gitignored). Cache files embed `engine_binary_sha256` and
+  `opening_book_sha256` from the cached `AuditRun.manifest`; stale entries
+  are auto-detected on engine or book swap (FR-008, R3 mitigation).
+- CI job `fpr_gate` in `.github/workflows/ci.yml`. Uses `actions/cache@v4`
+  keyed on `opening_book.bin` + corpus PGN content. Path-filtered: runs on
+  `push` to `main` and on PRs labeled `scoring`. Branch-protection (maintainer
+  configures separately) makes it required for merge.
+- Provenance schema for corpus fixtures (`*.provenance.json`) with five
+  required fields: `source`, `retrieved_at`, `label`, `label_confidence`,
+  `notes` (FR-005, contracts/provenance.schema.json).
+
+### Pending (Feature 005 — to land before v2.0.0 promotion)
+
+- Real Lichess 2026-04 baselines (replaces hand-curated stub at
+  `packages/heuristics/data/rating_baselines.json`) — US1.
+- Real `gm2600.bin` opening book (replaces 1.3 KB stub at
+  `packages/analysis-core/data/opening_book.bin`) — US2.
+- ≥ 50 verified-clean PGN fixtures under `tests/fixtures/corpora/clean/`
+  and ≥ 20 Lichess-flagged-account PGN fixtures under
+  `.../engine_assisted/` — US3 (FR-005).
+- Measured FPR + TPR on the shipped corpus (point estimates + 95% CIs);
+  smoke-test score delta vs Phase 1 stub baseline — FR-009.
+
+### Added (carried over)
 
 - Feature 003 — Repository health, CI supply-chain hardening, and OSS curation
   (SHA-pinned Actions, Dependabot, community health files, py.typed markers)

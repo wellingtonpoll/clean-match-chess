@@ -344,6 +344,7 @@ def _build_run(
         heuristic_set=heuristics,
         score=score,
         status=RunStatus.COMPLETE,
+        manifest=manifest,
     )
 
     root = persist_root or cleanmatch_home()

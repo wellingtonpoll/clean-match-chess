@@ -1,5 +1,14 @@
 # analysis-core Changelog
 
+## Unreleased (Feature 005 Phase 2)
+
+### Changed
+
+- `_build_run` now attaches the `ReproducibilityManifest` to the returned
+  `AuditRun.manifest` field (feature 005 FR-003 / US4). On-disk
+  `manifest.json` continues to be written unchanged; consumers reading the
+  audit JSON envelope no longer need a separate disk read for provenance.
+
 ## 2.0.0 — 2026-05-24 (Feature 004 Phase 1)
 
 ### Added

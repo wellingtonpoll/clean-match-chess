@@ -12,6 +12,7 @@ dev = [
     "pytest-cov>=5",
     "pytest-benchmark>=4",
     "pytest-httpx>=0.36.2",
+    "jsonschema>=4.0",
 ]
 
 [tool.uv.workspace]
@@ -84,6 +85,7 @@ testpaths = [
     "packages/report-engine/tests",
     "packages/shared-types/tests",
     "tests/e2e",
+    "tests/fpr_gate",
 ]
 markers = [
     "slow: tests that exercise real Stockfish or do heavy work",
@@ -93,8 +95,10 @@ markers = [
     "audit_typography: design-system typography audit",
     "audit_motion: design-system motion audit",
     "audit_lexical: design-system lexical audit",
+    "fpr_gate: feature 005 labeled-corpus false-positive-rate gate",
 ]
 addopts = "--strict-markers --import-mode=importlib"
+pythonpath = ["."]
 filterwarnings = [
     "error",
 ]

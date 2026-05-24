@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/wellingtonpoll/clean-match-chess/specs/005-scoring-v2-phase2/contracts/provenance.schema.json",
+  "title": "Corpus Fixture Provenance Record",
+  "description": "Sibling provenance metadata for every PGN fixture under tests/fixtures/corpora/{clean,engine_assisted}/. Required by feature 005 FR-005.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source", "retrieved_at", "label", "label_confidence", "notes"],
+  "properties": {
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "description": "URL or canonical identifier of the source event, account, or archive."
+    },
+    "retrieved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp of PGN retrieval."
+    },
+    "label": {
+      "type": "string",
+      "enum": ["clean", "engine_assisted"],
+      "description": "Ground-truth label for the FPR-gate test."
+    },
+    "label_confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "Reviewer confidence in the label (not statistical confidence)."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Free-form caveats. For engine_assisted Lichess fixtures, MUST acknowledge the circularity risk with Lichess's own classifier."
+    }
+  }
+}
