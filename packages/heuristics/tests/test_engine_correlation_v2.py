@@ -77,7 +77,10 @@ def test_calibrated_mode_sets_mean_to_raw_rate_and_weighted_to_ratio() -> None:
     positions, moves = _make_75pct_top1_game()
     baselines = get_baselines()
     top1, _top3, _weighted = engine_correlation(
-        positions, moves, subject_rating=1500, baselines=baselines,
+        positions,
+        moves,
+        subject_rating=1500,
+        baselines=baselines,
     )
     # 30/40 = 0.75 observed top-1.
     assert abs(top1.mean - 0.75) < 1e-6
@@ -91,7 +94,10 @@ def test_top3_silenced_in_calibrated_mode() -> None:
     positions, moves = _make_75pct_top1_game()
     baselines = get_baselines()
     _top1, top3, _weighted = engine_correlation(
-        positions, moves, subject_rating=1500, baselines=baselines,
+        positions,
+        moves,
+        subject_rating=1500,
+        baselines=baselines,
     )
     assert top3.samples == 0
 
@@ -101,20 +107,26 @@ def test_missing_rating_uses_rating_unknown_bucket() -> None:
     positions, moves = _make_75pct_top1_game()
     baselines = get_baselines()
     top1_unknown, _, _ = engine_correlation(
-        positions, moves, subject_rating=None, baselines=baselines,
+        positions,
+        moves,
+        subject_rating=None,
+        baselines=baselines,
     )
     bucket = baselines.for_label("rating-unknown")
     assert abs(top1_unknown.weighted_mean - (0.75 / bucket.expected_top1)) < 1e-6
 
 
-@pytest.mark.parametrize("rating,label", [
-    (800, "≤1200"),
-    (1300, "1201-1500"),
-    (1700, "1501-1800"),
-    (1900, "1801-2100"),
-    (2200, "2101-2400"),
-    (2500, "2401+"),
-])
+@pytest.mark.parametrize(
+    "rating,label",
+    [
+        (800, "≤1200"),
+        (1300, "1201-1500"),
+        (1700, "1501-1800"),
+        (1900, "1801-2100"),
+        (2200, "2101-2400"),
+        (2500, "2401+"),
+    ],
+)
 def test_all_six_rated_buckets_queryable(rating: int, label: str) -> None:
     """AS2: every rated bucket plus rating-unknown is queryable."""
     baselines = get_baselines()
@@ -127,10 +139,16 @@ def test_low_rated_player_with_75pct_top1_has_high_ratio() -> None:
     positions, moves = _make_75pct_top1_game()
     baselines = get_baselines()
     top1_low, _, _ = engine_correlation(
-        positions, moves, subject_rating=1200, baselines=baselines,
+        positions,
+        moves,
+        subject_rating=1200,
+        baselines=baselines,
     )
     top1_high, _, _ = engine_correlation(
-        positions, moves, subject_rating=2700, baselines=baselines,
+        positions,
+        moves,
+        subject_rating=2700,
+        baselines=baselines,
     )
     # The low-rated player's ratio must exceed the high-rated player's
     # ratio by a meaningful margin (≥ 1.5x) on the same observed rate.

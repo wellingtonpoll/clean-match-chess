@@ -24,8 +24,8 @@ jobs:
         with:
           version: "0.11.5"
 
-      - name: Set up Python 3.11
-        run: uv python install 3.11
+      - name: Set up Python 3.12
+        run: uv python install 3.12
 
       - name: Sync workspace
         run: uv sync --all-packages --all-extras
@@ -40,13 +40,17 @@ jobs:
         run: uv run mypy
 
       - name: Tests (pytest + coverage)
-        run: uv run pytest --cov --cov-fail-under=85
+        run: uv run pytest --cov --cov-report=xml --cov-report=term --cov-fail-under=85
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354  # v6.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-${{ github.sha }}
           fail_ci_if_error: false
+          verbose: true
 
   benchmarks:
     if: contains(github.event.pull_request.labels.*.name, 'benchmark')
@@ -62,7 +66,7 @@ jobs:
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b  # v8.1.0
         with:
           version: "0.11.5"
-      - run: uv python install 3.11
+      - run: uv python install 3.12
       - run: uv sync --all-packages --all-extras --dev
       - name: Run benchmark suite
         run: |
@@ -85,13 +89,18 @@ jobs:
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b  # v8.1.0
         with:
           version: "0.11.5"
-      - run: uv python install 3.11
+      - run: uv python install 3.12
       - run: uv sync --all-packages --all-extras
       - name: Design-system audits (enforced)
         run: |
           uv run pytest \
-            packages/design-system/tests/ \
-            -m "audit_palette or audit_typography or audit_motion or audit_lexical" \
+            packages/design-system/tests/unit/test_audit_palette.py \
+            packages/design-system/tests/unit/test_audit_palette_risk.py \
+            packages/design-system/tests/unit/test_audit_typography.py \
+            packages/design-system/tests/unit/test_audit_typography_role.py \
+            packages/design-system/tests/unit/test_audit_motion.py \
+            packages/design-system/tests/unit/test_audit_motion_dynamic.py \
+            packages/design-system/tests/unit/test_audit_lexical.py \
             --no-cov
 
   sc007_onboarding_log:
@@ -108,7 +117,7 @@ jobs:
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b  # v8.1.0
         with:
           version: "0.11.5"
-      - run: uv python install 3.11
+      - run: uv python install 3.12
       - run: uv sync --all-packages --all-extras
       - name: Four locked audits (first-push gate per SC-007)
         run: |
@@ -117,8 +126,13 @@ jobs:
             exit 0
           fi
           uv run pytest \
-            packages/design-system/tests/ \
-            -m "audit_palette or audit_typography or audit_motion or audit_lexical" \
+            packages/design-system/tests/unit/test_audit_palette.py \
+            packages/design-system/tests/unit/test_audit_palette_risk.py \
+            packages/design-system/tests/unit/test_audit_typography.py \
+            packages/design-system/tests/unit/test_audit_typography_role.py \
+            packages/design-system/tests/unit/test_audit_motion.py \
+            packages/design-system/tests/unit/test_audit_motion_dynamic.py \
+            packages/design-system/tests/unit/test_audit_lexical.py \
             --no-cov
       - name: Emit SC007 structured log line
         if: always()

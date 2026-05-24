@@ -76,7 +76,9 @@ def engine_correlation(
             # Top-3 expected rate not in baselines → silence.
             _silenced("engine-correlation/top3"),
             _calibrated_agg(
-                "engine-correlation/weighted", weighted_rate, n,
+                "engine-correlation/weighted",
+                weighted_rate,
+                n,
                 bucket.expected_weighted_top1,
             ),
         )

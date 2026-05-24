@@ -68,25 +68,19 @@ def _move(ply: int, *, uci: str = "e2e4", delta: int = 0) -> Move:
     )
 
 
-def _engine_perfect_block(
-    start: int, length: int
-) -> tuple[tuple[Position, ...], tuple[Move, ...]]:
+def _engine_perfect_block(start: int, length: int) -> tuple[tuple[Position, ...], tuple[Move, ...]]:
     """A block of `length` plies where the player always plays top_uci."""
     positions = tuple(
-        _position(start + i, eval_cp=0, composite=0.4, top_uci="e2e4")
-        for i in range(length)
+        _position(start + i, eval_cp=0, composite=0.4, top_uci="e2e4") for i in range(length)
     )
     moves = tuple(_move(start + i, uci="e2e4", delta=0) for i in range(length))
     return positions, moves
 
 
-def _random_block(
-    start: int, length: int
-) -> tuple[tuple[Position, ...], tuple[Move, ...]]:
+def _random_block(start: int, length: int) -> tuple[tuple[Position, ...], tuple[Move, ...]]:
     """A block where the player plays a non-top move."""
     positions = tuple(
-        _position(start + i, eval_cp=0, composite=0.4, top_uci="e2e4")
-        for i in range(length)
+        _position(start + i, eval_cp=0, composite=0.4, top_uci="e2e4") for i in range(length)
     )
     moves = tuple(_move(start + i, uci="g1f3", delta=-50) for i in range(length))
     return positions, moves
@@ -122,9 +116,7 @@ def _audit_score(
             block_pos, block_mov = _random_block(start, block_len)
         positions.extend(block_pos)
         moves.extend(block_mov)
-        segments.append(
-            Segment(phase=phase, ply_range=(start, start + block_len))
-        )
+        segments.append(Segment(phase=phase, ply_range=(start, start + block_len)))
         cursor += block_len
 
     baselines = get_baselines()

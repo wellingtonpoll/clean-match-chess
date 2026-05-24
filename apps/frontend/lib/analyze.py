@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """Streaming game analyzer — outputs JSONL to stdout, one line per completed game."""
-import sys, json, concurrent.futures
-sys.path.insert(0, '/home/mestre/Documents/repositories/clean-match-chess')
+
+import concurrent.futures
+import json
+import sys
+
+sys.path.insert(0, "/home/mestre/Documents/repositories/clean-match-chess")
 
 # The script receives args: username platform count offset
 # platform is either "chesscom" or "lichess" (lichess not supported yet → error)
 
 from analysis_core.ingest.chesscom_client import ChesscomClient, ChesscomError
-from analysis_core.ingest.pgn_loader import load_pgn_text, is_eligible_for_scoring
+from analysis_core.ingest.pgn_loader import is_eligible_for_scoring, load_pgn_text
 from analysis_core.pipeline.run import run_single_game
-from shared_types.game import PlayerColor, Game
+from shared_types.game import Game
 
 
 def analyze_game(idx: int, pgn: str, headers: dict) -> dict:
@@ -53,13 +57,16 @@ def main():
         print(json.dumps({"error": str(e)}), flush=True)
         sys.exit(1)
 
-    batch = fetched[offset:offset + count]
+    batch = fetched[offset : offset + count]
     if not batch:
         print(json.dumps({"error": "no_games"}), flush=True)
         sys.exit(0)
 
     # Parse headers before submitting to threads
-    import chess.pgn, io
+    import io
+
+    import chess.pgn
+
     tasks = []
     for i, f in enumerate(batch):
         pgn_game = chess.pgn.read_game(io.StringIO(f.pgn))
@@ -67,8 +74,7 @@ def main():
         tasks.append((offset + i, f.pgn, headers))
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        futures = {executor.submit(analyze_game, idx, pgn, hdrs): idx
-                   for idx, pgn, hdrs in tasks}
+        futures = {executor.submit(analyze_game, idx, pgn, hdrs): idx for idx, pgn, hdrs in tasks}
         for future in concurrent.futures.as_completed(futures):
             result = future.result()
             print(json.dumps(result), flush=True)

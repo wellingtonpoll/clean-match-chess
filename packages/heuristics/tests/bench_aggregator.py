@@ -102,6 +102,4 @@ def test_bootstrap_perf_budget() -> None:
     )
     elapsed_ms = (time.perf_counter() - start) * 1000.0
 
-    assert elapsed_ms <= _BUDGET_MS, (
-        f"bootstrap took {elapsed_ms:.1f}ms; budget {_BUDGET_MS}ms"
-    )
+    assert elapsed_ms <= _BUDGET_MS, f"bootstrap took {elapsed_ms:.1f}ms; budget {_BUDGET_MS}ms"

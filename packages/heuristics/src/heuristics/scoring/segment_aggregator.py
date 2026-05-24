@@ -143,9 +143,7 @@ def _per_segment_signals(
     bs = blunder_suppression(sub_positions, sub_moves)
 
     top1_norm = _normalize_engine_correlation_rate(top1, bucket.expected_top1)
-    weighted_norm = _normalize_engine_correlation_rate(
-        weighted, bucket.expected_weighted_top1
-    )
+    weighted_norm = _normalize_engine_correlation_rate(weighted, bucket.expected_weighted_top1)
 
     signals: list[SignalAggregate] = [acpl, top1_norm, weighted_norm, bs]
 

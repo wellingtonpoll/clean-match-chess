@@ -26,9 +26,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-BASELINES_PATH: Final[Path] = (
-    Path(__file__).resolve().parents[3] / "data" / "rating_baselines.json"
-)
+BASELINES_PATH: Final[Path] = Path(__file__).resolve().parents[3] / "data" / "rating_baselines.json"
 
 _ALLOWED_BUCKET_LABELS: Final[tuple[str, ...]] = (
     "≤1200",
@@ -176,9 +174,7 @@ def _build_bucket(entry: object) -> RatingBaseline:
     if not isinstance(sample_size, int) or sample_size < 100:
         raise ValueError(f"sample_size must be int >= 100, got {sample_size!r}")
     expected_top1 = _check_unit(entry["expected_top1"], "expected_top1")
-    expected_weighted_top1 = _check_unit(
-        entry["expected_weighted_top1"], "expected_weighted_top1"
-    )
+    expected_weighted_top1 = _check_unit(entry["expected_weighted_top1"], "expected_weighted_top1")
     expected_acpl_mean = _check_acpl(entry["expected_acpl_mean"], "expected_acpl_mean")
     expected_acpl_stdev = _check_acpl(entry["expected_acpl_stdev"], "expected_acpl_stdev")
     return RatingBaseline(

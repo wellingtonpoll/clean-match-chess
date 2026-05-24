@@ -33,8 +33,16 @@ def test_contains_returns_false_for_obviously_non_book_position() -> None:
         # 10 plies of nonsense rook-pawn shuffling — guaranteed not in any
         # opening book.
         for uci in (
-            "a2a3", "a7a6", "a3a4", "a6a5", "h2h3",
-            "h7h6", "h3h4", "h6h5", "b2b3", "b7b6",
+            "a2a3",
+            "a7a6",
+            "a3a4",
+            "a6a5",
+            "h2h3",
+            "h7h6",
+            "h3h4",
+            "h6h5",
+            "b2b3",
+            "b7b6",
         ):
             board.push(chess.Move.from_uci(uci))
         assert book.contains(board) is False

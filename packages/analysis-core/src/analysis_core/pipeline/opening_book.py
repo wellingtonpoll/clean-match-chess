@@ -28,9 +28,7 @@ from typing import Final
 import chess
 import chess.polyglot
 
-DEFAULT_BOOK_RELATIVE: Final[Path] = Path(
-    "packages/analysis-core/data/opening_book.bin"
-)
+DEFAULT_BOOK_RELATIVE: Final[Path] = Path("packages/analysis-core/data/opening_book.bin")
 
 
 class OpeningBook:
@@ -45,8 +43,7 @@ class OpeningBook:
             return
         if not path.is_file():
             raise FileNotFoundError(
-                f"opening book not found at {path}; "
-                "bundle the canonical book before audit"
+                f"opening book not found at {path}; bundle the canonical book before audit"
             )
         self._sha256 = _sha256_of(path)
         self._reader = chess.polyglot.MemoryMappedReader(str(path))

@@ -85,9 +85,7 @@ def _move(ply: int, delta: int) -> Move:
 
 def test_evaded_blunder_returns_1_0() -> None:
     """AS1: high complexity + top-2 is -250 + played delta -50 → evaded."""
-    positions = (
-        _position(0, eval_cp=50, composite=0.8, second_eval_cp=-200),
-    )
+    positions = (_position(0, eval_cp=50, composite=0.8, second_eval_cp=-200),)
     moves = (_move(0, delta=-50),)
     agg = blunder_suppression(positions, moves)
     assert agg.samples == 1
@@ -96,9 +94,7 @@ def test_evaded_blunder_returns_1_0() -> None:
 
 def test_not_evaded_returns_0_0() -> None:
     """Same setup, but the played move IS the blunder (delta -250)."""
-    positions = (
-        _position(0, eval_cp=50, composite=0.8, second_eval_cp=-200),
-    )
+    positions = (_position(0, eval_cp=50, composite=0.8, second_eval_cp=-200),)
     moves = (_move(0, delta=-250),)
     agg = blunder_suppression(positions, moves)
     assert agg.samples == 1
@@ -118,9 +114,7 @@ def test_no_qualifying_positions_silenced() -> None:
 
 def test_complexity_below_threshold_excluded() -> None:
     """Position with complexity == 0.6 (not > 0.6) does not qualify."""
-    positions = (
-        _position(0, eval_cp=50, composite=0.6, second_eval_cp=-300),
-    )
+    positions = (_position(0, eval_cp=50, composite=0.6, second_eval_cp=-300),)
     moves = (_move(0, delta=-50),)
     agg = blunder_suppression(positions, moves)
     assert agg.samples == 0
@@ -128,9 +122,7 @@ def test_complexity_below_threshold_excluded() -> None:
 
 def test_only_top1_no_second_candidate_excluded() -> None:
     """No top_moves[1] → not an expected-blunder position."""
-    positions = (
-        _position(0, eval_cp=50, composite=0.9, second_eval_cp=None),
-    )
+    positions = (_position(0, eval_cp=50, composite=0.9, second_eval_cp=None),)
     moves = (_move(0, delta=-50),)
     agg = blunder_suppression(positions, moves)
     assert agg.samples == 0
@@ -150,18 +142,13 @@ def test_regression_vs_old_buggy_behavior() -> None:
     Construct a position where the OLD code returned non-zero but the NEW
     code returns 0 (no qualifying second candidate).
     """
-    positions = (
-        _position(0, eval_cp=10, composite=0.9, second_eval_cp=None),
-    )
+    positions = (_position(0, eval_cp=10, composite=0.9, second_eval_cp=None),)
     moves = (_move(0, delta=0),)
     new_agg = blunder_suppression(positions, moves)
 
     # Old behavior: 1 suppressed / 1 expected = 1.0; samples=1.
     old_expected = [p for p in positions if p.complexity and p.complexity.composite > 0.7]
-    old_suppressed = sum(
-        1 for p in old_expected
-        if p.eval_cp is not None and abs(p.eval_cp) < 200
-    )
+    old_suppressed = sum(1 for p in old_expected if p.eval_cp is not None and abs(p.eval_cp) < 200)
     old_value = old_suppressed / len(old_expected) if old_expected else 0.0
     assert old_value == 1.0
 

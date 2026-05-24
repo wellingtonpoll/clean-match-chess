@@ -27,9 +27,20 @@ from shared_types.game import (
 
 # 14-ply Italian Game then 46 plies of legal-first continuation = 60 plies.
 _ITALIAN_OPENING_SAN = (
-    "e4", "e5", "Nf3", "Nc6", "Bc4", "Bc5",
-    "c3", "Nf6", "d4", "exd4", "cxd4", "Bb4+",
-    "Nc3", "Nxe4",
+    "e4",
+    "e5",
+    "Nf3",
+    "Nc6",
+    "Bc4",
+    "Bc5",
+    "c3",
+    "Nf6",
+    "d4",
+    "exd4",
+    "cxd4",
+    "Bb4+",
+    "Nc3",
+    "Nxe4",
 )
 
 
@@ -120,6 +131,4 @@ def test_bundled_book_marks_opening_plies_as_book() -> None:
         bundled.close()
     # First 12 plies should be in book under standard Italian theory.
     book_flags = [p.is_book for p in positions[:12]]
-    assert sum(book_flags) >= 8, (
-        f"expected ≥8 of first 12 plies in book; got {book_flags}"
-    )
+    assert sum(book_flags) >= 8, f"expected ≥8 of first 12 plies in book; got {book_flags}"

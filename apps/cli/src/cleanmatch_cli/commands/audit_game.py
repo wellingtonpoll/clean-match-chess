@@ -45,7 +45,8 @@ def execute(
 
     color = _parse_subject(subject)
     run = run_single_game(
-        game, subject=color,
+        game,
+        subject=color,
         engine_path=engine_path or None,
         engine_image=engine_image or None,
         book_path=book_path,
