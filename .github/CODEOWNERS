@@ -1,0 +1,6 @@
+# Global ownership — all files require review from the maintainer.
+* @wellingtonpoll
+
+# Critical areas get explicit ownership for clarity.
+packages/design-system/ @wellingtonpoll
+specs/ @wellingtonpoll

@@ -140,6 +140,6 @@ Overall average: **60-90% token reduction** on common development operations.
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at `specs/002-design-system/plan.md`. Cross-feature dependency on
-`specs/001-fairplay-analysis/plan.md`.
+at `specs/003-repo-health-hardening/plan.md`. Cross-feature dependency on
+`specs/001-fairplay-analysis/plan.md` and `specs/002-design-system/plan.md`.
 <!-- SPECKIT END -->
