@@ -24,8 +24,8 @@ jobs:
         with:
           version: "0.11.5"
 
-      - name: Set up Python 3.11
-        run: uv python install 3.11
+      - name: Set up Python 3.12
+        run: uv python install 3.12
 
       - name: Sync workspace
         run: uv sync --all-packages --all-extras
@@ -66,7 +66,7 @@ jobs:
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b  # v8.1.0
         with:
           version: "0.11.5"
-      - run: uv python install 3.11
+      - run: uv python install 3.12
       - run: uv sync --all-packages --all-extras --dev
       - name: Run benchmark suite
         run: |
@@ -89,7 +89,7 @@ jobs:
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b  # v8.1.0
         with:
           version: "0.11.5"
-      - run: uv python install 3.11
+      - run: uv python install 3.12
       - run: uv sync --all-packages --all-extras
       - name: Design-system audits (enforced)
         run: |
@@ -112,7 +112,7 @@ jobs:
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b  # v8.1.0
         with:
           version: "0.11.5"
-      - run: uv python install 3.11
+      - run: uv python install 3.12
       - run: uv sync --all-packages --all-extras
       - name: Four locked audits (first-push gate per SC-007)
         run: |
