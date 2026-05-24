@@ -2,12 +2,11 @@
 
 Probabilistic fair-play audit platform for online chess.
 
-[![tests](https://img.shields.io/badge/tests-285%20passing-success)]()
-[![coverage](https://img.shields.io/badge/coverage-93%25-success)]()
-[![mypy](https://img.shields.io/badge/mypy-strict-blue)]()
-[![ruff](https://img.shields.io/badge/ruff-clean-blue)]()
-[![constitution](https://img.shields.io/badge/constitution-v1.0.0-informational)]()
-[![design-system](https://img.shields.io/badge/design--system-v1.0.0-F4D21F)]()
+[![CI](https://github.com/wellingtonpoll/clean-match-chess/actions/workflows/ci.yml/badge.svg)](https://github.com/wellingtonpoll/clean-match-chess/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/wellingtonpoll/clean-match-chess/branch/main/graph/badge.svg)](https://codecov.io/gh/wellingtonpoll/clean-match-chess)
+[![mypy](https://img.shields.io/badge/mypy-strict-blue)](pyproject.toml)
+[![ruff](https://img.shields.io/badge/ruff-clean-blue)](pyproject.toml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
 > **Forensic Analytics Design System v1.0.0** — palette, typography,
 > motion, and lexical audits enforced in CI.
@@ -34,6 +33,8 @@ cd clean-match-chess
 uv sync
 uv run cleanmatch --help
 ```
+
+**Requirements**: Python 3.11+, [Stockfish 16+](https://stockfishchess.org/download/)
 
 ## Repository layout
 
@@ -69,4 +70,4 @@ performance.
 
 ## License
 
-TBD.
+[Apache 2.0](LICENSE)
