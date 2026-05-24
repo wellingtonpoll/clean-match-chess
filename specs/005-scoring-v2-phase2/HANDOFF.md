@@ -1,15 +1,21 @@
 # Feature 005 — Hand-off: human-action gates
 
-Branch `005-scoring-v2-phase2` ships all automatable infra (code, tests, CI workflow, CHANGELOGs). The 15 remaining tasks require external network access, manual research, or full-stack runtime that the implementation agent cannot perform. Maintainer action items below, grouped by dependency.
+Branch `005-scoring-v2-phase2` ships code, tests, CI workflow, CHANGELOGs, the real opening book, and 50 clean corpus fixtures. The remaining tasks require maintainer-machine resources (29 GB Lichess dataset, Stockfish runtime, manual sourcing of publicly-disclosed cheat cases). Maintainer action items below, grouped by dependency.
 
 ---
 
 ## Status (2026-05-24)
 
-- **Code complete**: 24/39 tasks marked `[X]` in `tasks.md`.
-- **Pipeline green**: `uv run pytest --cov` → 417 passed, 3 skipped, **coverage 86.35%** (≥ 85% gate).
+- **Tasks complete**: 29/39 marked `[X]` in `tasks.md`.
+- **Pipeline green**: `uv run pytest --cov` → 421 passed, 3 skipped, **coverage ≥ 85%**.
 - **Lint/type clean**: `uv run ruff check .` + `uv run ruff format --check .` + `uv run mypy` all pass.
-- **CI workflow added**: `.github/workflows/ci.yml` now declares the `fpr_gate` job. Will run on `push` to `main` and on PRs labeled `scoring`. Currently SKIPs (graceful) because the real corpus has not yet been populated.
+- **Real opening book installed**: 6.5 MB at `packages/analysis-core/data/opening_book.bin`,
+  sha256 `dd0c9b50f75274b421ee9bfa12b45920b38124c9e2c7768f1179d130357c4532`,
+  derived from Lichess broadcast 2025-02/03/04 archives (60k OTB games).
+- **50 clean corpus fixtures** under `tests/fixtures/corpora/clean/` with
+  matching `.provenance.json` siblings.
+- **CI workflow added**: `.github/workflows/ci.yml` declares the `fpr_gate` job.
+  Currently SKIPS gracefully because `engine_assisted/` corpus is empty.
 
 ---
 

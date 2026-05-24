@@ -2,8 +2,19 @@
 
 ## Unreleased (Feature 005 Phase 2)
 
+### Added
+
+- `packages/analysis-core/scripts/build_book_from_broadcasts.py` — one-shot
+  maintainer script that builds a Polyglot opening book from a Lichess
+  broadcast PGN archive (or any standard PGN file). Replaces the Phase 1
+  synthetic stub generator.
+
 ### Changed
 
+- `packages/analysis-core/data/opening_book.bin` — replaced Phase 1
+  synthetic stub (1,296 bytes, 81 entries) with a real Lichess-broadcast-derived
+  Polyglot book (6,800,992 bytes, 425,062 entries). Provenance, source archive
+  sha256s, and reproduction recipe in `packages/analysis-core/data/README.md`.
 - `_build_run` now attaches the `ReproducibilityManifest` to the returned
   `AuditRun.manifest` field (feature 005 FR-003 / US4). On-disk
   `manifest.json` continues to be written unchanged; consumers reading the

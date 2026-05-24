@@ -1,0 +1,7 @@
+{
+  "source": "https://database.lichess.org/broadcast/lichess_db_broadcast_2025-02-03-04.pgn.zst",
+  "retrieved_at": "2026-05-24T22:30:31Z",
+  "label": "clean",
+  "label_confidence": "high",
+  "notes": "OTB broadcast game (Round 3: Fitzsimons, Pat - Loughran, John) \u2014 arbiter-monitored at play time. Source: Lichess broadcast archive lichess_db_broadcast_2025-02-03-04 (CC-BY-SA 4.0). Players: Fitzsimons, Pat vs Loughran, John."
+}

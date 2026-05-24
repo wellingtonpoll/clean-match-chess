@@ -11,6 +11,24 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added — Feature 005 (Scoring v2 Phase 2)
 
+- **Real Polyglot opening book** at `packages/analysis-core/data/opening_book.bin`
+  (US2). Replaces the 1.3 KB Phase 1 synthetic stub with a 6.5 MB book derived
+  from Lichess broadcast PGN archives 2025-02 + 2025-03 + 2025-04 (60,644 OTB
+  master games, 425,062 entries). sha256:
+  `dd0c9b50f75274b421ee9bfa12b45920b38124c9e2c7768f1179d130357c4532`.
+  Build script: `packages/analysis-core/scripts/build_book_from_broadcasts.py`.
+  License: CC-BY-SA 4.0 (inherited from upstream Lichess broadcasts).
+  Substitution rationale: the originally documented `gm2600.bin` upstream URL
+  (research.md R2) is no longer reachable; a Lichess-broadcast-derived book is
+  a stronger provenance trail (CC-BY-SA 4.0, sha256-verifiable, fully
+  reproducible from a public URL).
+- **Verified clean corpus fixtures**: 50 OTB tournament games under
+  `tests/fixtures/corpora/clean/` (US3 partial — clean bucket only).
+  Source: Lichess broadcast archives 2025-02 + 2025-03 + 2025-04.
+  Each fixture carries a sibling `.provenance.json` matching
+  `contracts/provenance.schema.json` with `label="clean"`,
+  `label_confidence="high"` (arbiter-monitored). Extraction script at
+  `tests/fpr_gate/_corpus_extract.py`.
 - `AuditRun.manifest` optional field — `ReproducibilityManifest` is now
   attached in-band to every audit output, so consumers no longer need a
   separate `manifest.json` read for provenance (FR-003, US4).
@@ -18,7 +36,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   with helpers (`provenance.py`, `cache.py`, `gate.py`). Test asserts
   **FPR ≤ 2.0%** on a clean corpus and **TPR ≥ 80.0%** on an
   engine-assisted corpus at the `RISK_HIGH_MIN` decision threshold
-  (FR-006, FR-007, SC-003).
+  (FR-006, FR-007, SC-003). Skips gracefully when either bucket is empty.
 - Per-fixture engine-analysis cache under `tests/fixtures/corpora/.cache/`
   (gitignored). Cache files embed `engine_binary_sha256` and
   `opening_book_sha256` from the cached `AuditRun.manifest`; stale entries
@@ -33,13 +51,17 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Pending (Feature 005 — to land before v2.0.0 promotion)
 
-- Real Lichess 2026-04 baselines (replaces hand-curated stub at
-  `packages/heuristics/data/rating_baselines.json`) — US1.
-- Real `gm2600.bin` opening book (replaces 1.3 KB stub at
-  `packages/analysis-core/data/opening_book.bin`) — US2.
-- ≥ 50 verified-clean PGN fixtures under `tests/fixtures/corpora/clean/`
-  and ≥ 20 Lichess-flagged-account PGN fixtures under
-  `.../engine_assisted/` — US3 (FR-005).
+- Real Lichess month-export baselines (replaces hand-curated stub at
+  `packages/heuristics/data/rating_baselines.json`) — US1. Deferred
+  because the source archive is ~29 GB compressed and a build pass takes
+  30-90 min CPU; needs maintainer-machine execution.
+- ≥ 20 engine-assisted PGN fixtures under `tests/fixtures/corpora/engine_assisted/`
+  with `label_confidence="high"` and notes acknowledging Lichess-classifier
+  circularity — US3 (FR-005). Deferred because Lichess does not publish a
+  flagged-account list via API; manual sourcing of publicly-disclosed cases
+  is required (HANDOFF.md Block B-2).
+- Full FPR-gate run on the complete corpus (T023) + regression-PR smoke
+  (T025) + determinism re-run verification (T030).
 - Measured FPR + TPR on the shipped corpus (point estimates + 95% CIs);
   smoke-test score delta vs Phase 1 stub baseline — FR-009.
 

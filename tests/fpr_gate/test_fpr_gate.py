@@ -26,20 +26,25 @@ CORPUS_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "corpora"
 REPORT_PATH = CORPUS_ROOT / "fpr_gate_report.json"
 
 
-def _corpus_has_fixtures() -> bool:
+def _corpus_status() -> tuple[int, int]:
+    """Return (clean_count, engine_assisted_count) ignoring _smoke/."""
     try:
-        return any(True for _ in iter_corpus(CORPUS_ROOT))
+        clean = sum(1 for _, r in iter_corpus(CORPUS_ROOT) if r.label == "clean")
+        ea = sum(1 for _, r in iter_corpus(CORPUS_ROOT) if r.label == "engine_assisted")
     except FileNotFoundError:
-        return False
+        return (0, 0)
+    return (clean, ea)
 
 
 @pytest.mark.fpr_gate
 @pytest.mark.slow
 def test_fpr_gate_passes() -> None:
-    if not _corpus_has_fixtures():
+    clean, ea = _corpus_status()
+    if clean == 0 or ea == 0:
         pytest.skip(
-            "feature 005 corpus not yet populated under tests/fixtures/corpora/ "
-            "(see specs/005-scoring-v2-phase2/quickstart.md §3 for sourcing)"
+            f"feature 005 corpus incomplete: clean={clean}, engine_assisted={ea}. "
+            f"FPR gate requires both buckets populated. "
+            f"See specs/005-scoring-v2-phase2/HANDOFF.md Block B."
         )
 
     report = run_gate(CORPUS_ROOT)
