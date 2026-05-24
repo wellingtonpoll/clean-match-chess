@@ -24,6 +24,9 @@ def execute(
     count: int,
     time_control: str | None,
     output: str,
+    engine_path: str | None = None,
+    engine_image: str | None = None,
+    book_path: str | None = None,
 ) -> ExitCode:
     if platform != "chesscom":
         sys.stderr.write(f"error: --platform {platform!r} not supported in MVP; use 'chesscom'.\n")
@@ -62,6 +65,9 @@ def execute(
         username,
         tuple(games),
         subject=PlayerColor.WHITE,
+        engine_path=engine_path or None,
+        engine_image=engine_image or None,
+        book_path=book_path,
         platform=platform,
     )
 

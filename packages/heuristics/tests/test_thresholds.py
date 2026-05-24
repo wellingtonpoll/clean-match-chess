@@ -10,14 +10,14 @@ from heuristics.scoring.thresholds import (
 from shared_types.score import RiskLevel
 
 
-def test_version_pinned_v1() -> None:
-    assert SCORING_THRESHOLDS_VERSION == "1.0.0"
+def test_version_pinned_v2() -> None:
+    assert SCORING_THRESHOLDS_VERSION == "2.0.0"
 
 
 def test_snapshot_carries_locked_values() -> None:
     snap = thresholds_snapshot()
     assert snap == {
-        "version": "1.0.0",
+        "version": "2.0.0",
         "risk_low_max": 0.35,
         "risk_medium_max": 0.70,
         "risk_high_min": 0.70,

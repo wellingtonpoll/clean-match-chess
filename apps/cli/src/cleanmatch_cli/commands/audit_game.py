@@ -23,6 +23,9 @@ def execute(
     *,
     subject: str | None,
     output: str,
+    engine_path: str | None = None,
+    engine_image: str | None = None,
+    book_path: str | None = None,
 ) -> ExitCode:
     """Run the single-game audit. Returns the exit code."""
     try:
@@ -41,7 +44,12 @@ def execute(
         return ExitCode.USER_ERROR
 
     color = _parse_subject(subject)
-    run = run_single_game(game, subject=color)
+    run = run_single_game(
+        game, subject=color,
+        engine_path=engine_path or None,
+        engine_image=engine_image or None,
+        book_path=book_path,
+    )
 
     fmt = OutputFormat(output)
     payload = {
