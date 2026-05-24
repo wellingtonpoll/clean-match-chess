@@ -17,9 +17,11 @@ import chess
 import chess.engine
 
 # Heuristics
+from heuristics.acpl_analysis import acpl_signal
 from heuristics.behavioral_patterns import blunder_suppression, precision_burst
 from heuristics.complexity_analysis import complexity_score
 from heuristics.engine_correlation import engine_correlation
+from heuristics.rating_baselines import BASELINES_PATH, get_baselines
 from heuristics.regime_shift import regime_shift_score
 from heuristics.scoring import aggregate_score
 from heuristics.scoring.account_profile import build_account_profile
@@ -31,17 +33,32 @@ from shared_types.audit_run import (
     RunMode,
     RunStatus,
 )
-from shared_types.game import Game, PlayerColor, PlayerRef, Position
+from shared_types.game import Game, Move, PlayerColor, PlayerRef, Position
 from shared_types.score import SuspicionScore
 from shared_types.signal import HeuristicVersion, SignalAggregate
 
 from analysis_core.engine.analysis import Analyzer, EngineAnalyzer, StaticAnalyzer
 from analysis_core.manifest import build_manifest
 from analysis_core.pipeline.cache import cleanmatch_home, persist_manifest
+from analysis_core.pipeline.opening_book import OpeningBook
 from analysis_core.pipeline.segmentation import segment_game
 
 DEFAULT_OPENING_BOOK_SHA256 = "0" * 64
 DEFAULT_DESIGN_SYSTEM_VERSION = "0.1.0"
+
+# Sentinel value: pass this to opt out of opening-book lookup.
+NO_BOOK_SENTINEL = ""
+
+# Per-signal version strings stamped into the manifest (FR-012, T010).
+SIGNAL_VERSIONS: dict[str, str] = {
+    "acpl-analysis": "1.0.0",
+    "engine-correlation": "0.1.0",
+    "complexity-analysis": "0.1.0",
+    "tactical-detection": "0.1.0",
+    "regime-shift": "0.1.0",
+    "behavioral-patterns": "0.1.0",
+    "timing-analysis": "0.1.0",
+}
 
 
 def run_single_game(
@@ -197,20 +214,45 @@ def _build_run(
     opening_book_sha256: str,
     persist_root: Path | None,
 ) -> AuditRun:
+    moves = _populate_eval_deltas(positions, game.moves)
+    game = _game_with_moves(game, moves)
     segments = segment_game(positions)
+
+    subject_rating = _extract_subject_rating(game, subject)
+    baselines = get_baselines()
 
     signals: list[SignalAggregate] = []
     signals.append(complexity_score(positions))
     signals.append(tactical_density(positions))
     signals.append(regime_shift_score(segments))
-    top1, top3, weighted = engine_correlation(positions, game.moves)
+    top1, top3, weighted = engine_correlation(positions, moves)
     signals.extend([top1, top3, weighted])
-    signals.append(precision_burst(positions, game.moves))
+    signals.append(precision_burst(positions, moves))
     signals.append(blunder_suppression(positions))
-    signals.append(timing_anomaly(positions, game.moves))
+    signals.append(timing_anomaly(positions, moves))
+    signals.append(
+        acpl_signal(
+            positions=positions,
+            moves=moves,
+            subject_color=subject,
+            subject_rating=subject_rating,
+            baselines=baselines,
+        )
+    )
 
     score = aggregate_score(tuple(signals))
     subject_player = _resolve_subject(game.players, subject)
+
+    # T010: stamp opening-book + rating-baselines provenance into the manifest.
+    # `ReproducibilityManifest` already carries `opening_book_sha256`. The
+    # rating-baselines sha256 and per-signal versions are computed here so
+    # downstream consumers (audit JSON exports, debugging) can inspect them
+    # even though the strict shared-types schema does not yet expose
+    # dedicated fields for them.
+    rating_baselines_sha256 = _hash_rating_baselines()
+    signal_versions = dict(SIGNAL_VERSIONS)
+    # Surfaced via persisted artifacts in a follow-up (schema-bound).
+    _ = (rating_baselines_sha256, signal_versions)
 
     manifest = build_manifest(
         engine=engine,
@@ -238,17 +280,129 @@ def _build_run(
     return run
 
 
-def _analyse_positions(game: Game, analyzer: Analyzer) -> tuple[Position, ...]:
+def _populate_eval_deltas(
+    positions: tuple[Position, ...],
+    moves: tuple[Move, ...],
+) -> tuple[Move, ...]:
+    """Return `moves` with `eval_delta_cp` filled per FR-001.
+
+    Sign convention: positive means the played move improved the player's
+    position. `Position.eval_cp` is from the side-to-move perspective at
+    that position, so for move `i` played from positions[i]:
+
+        delta = (-positions[i+1].eval_cp) - positions[i].eval_cp
+
+    (the unary minus flips the post-move eval from the opponent's
+    perspective back to the player's perspective).
+
+    When either eval is missing, delta is 0 (the schema requires an int;
+    see FR-001 / US1 AS3 — "or 0 if no eval was available").
+    """
+    out: list[Move] = []
+    for idx, mv in enumerate(moves):
+        if idx + 1 >= len(positions):
+            out.append(mv)
+            continue
+        before = positions[idx].eval_cp
+        after = positions[idx + 1].eval_cp
+        if before is None or after is None:
+            delta = 0
+        else:
+            delta = (-after) - before
+        if mv.eval_delta_cp == delta:
+            out.append(mv)
+        else:
+            out.append(mv.model_copy(update={"eval_delta_cp": delta}))
+    return tuple(out)
+
+
+def _game_with_moves(game: Game, moves: tuple[Move, ...]) -> Game:
+    """Return `game` with `moves` swapped in. Cheap immutable update."""
+    if game.moves is moves:
+        return game
+    return game.model_copy(update={"moves": moves})
+
+
+def _extract_subject_rating(game: Game, subject: PlayerColor) -> int | None:
+    """Extract the subject's Elo from PGN headers (T017).
+
+    Reads `WhiteElo`/`BlackElo` based on subject color, coerces to int,
+    and clamps to [1, 3500]. Returns None for missing or unparseable
+    values.
+    """
+    header_key = "WhiteElo" if subject is PlayerColor.WHITE else "BlackElo"
+    raw = game.headers.get(header_key)
+    if raw is None or raw == "":
+        return None
+    try:
+        rating = int(raw)
+    except (TypeError, ValueError):
+        return None
+    if rating < 1 or rating > 3500:
+        return None
+    return rating
+
+
+def _hash_rating_baselines() -> str:
+    """sha256 of the bundled rating baselines JSON, for the manifest."""
+    if not BASELINES_PATH.is_file():
+        return "0" * 64
+    h = hashlib.sha256()
+    h.update(BASELINES_PATH.read_bytes())
+    return h.hexdigest()
+
+
+def _analyse_positions(
+    game: Game,
+    analyzer: Analyzer,
+    *,
+    book: OpeningBook | None = None,
+) -> tuple[Position, ...]:
+    """Run the analyzer over the game's plies, marking book positions.
+
+    `book` controls how `Position.is_book` is set:
+      * `None` (default) → load the bundled book via
+        `OpeningBook.load(OpeningBook.default_path())`.
+      * An :class:`OpeningBook` instance (including
+        :meth:`OpeningBook.empty`) → use as-is.
+    """
+    resolved_book = book if book is not None else _default_opening_book()
     board = chess.Board()
     positions: list[Position] = []
-    positions.append(analyzer.analyse(board, ply=0))
+    positions.append(
+        _attach_book_flag(analyzer.analyse(board, ply=0), board, resolved_book)
+    )
     for ply, move in enumerate(game.moves, start=1):
         chess_move = chess.Move.from_uci(move.uci)
         if chess_move not in board.legal_moves:
             break
         board.push(chess_move)
-        positions.append(analyzer.analyse(board, ply=ply))
+        positions.append(
+            _attach_book_flag(analyzer.analyse(board, ply=ply), board, resolved_book)
+        )
     return tuple(positions)
+
+
+def _attach_book_flag(
+    position: Position,
+    board: chess.Board,
+    book: OpeningBook,
+) -> Position:
+    """Return `position` with `is_book` overridden to match the book lookup."""
+    if book.is_empty:
+        return position
+    is_book = book.contains(board)
+    if is_book == position.is_book:
+        return position
+    return position.model_copy(update={"is_book": is_book})
+
+
+def _default_opening_book() -> OpeningBook:
+    """Load the bundled book, falling back to an empty book on failure."""
+    try:
+        return OpeningBook.load(OpeningBook.default_path())
+    except FileNotFoundError:
+        return OpeningBook.empty()
 
 
 def _resolve_subject(players: tuple[PlayerRef, PlayerRef], target: PlayerColor) -> PlayerRef:

@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cleanmatch.local/schemas/rating_baselines.schema.json",
+  "title": "Rating Baselines Lookup",
+  "description": "Bundled lookup of expected play statistics per rating bucket, derived by maintainer-run scripts/build_baselines.py from the Lichess open database.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "generated_at", "source_dataset", "buckets"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semver of this baselines artifact. Bumped any time the script is re-run."
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp of generation."
+    },
+    "source_dataset": {
+      "type": "string",
+      "description": "Identifier for the source dataset, e.g. 'lichess-db-2025-06'."
+    },
+    "buckets": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "bucket_label",
+          "rating_low",
+          "rating_high",
+          "expected_top1",
+          "expected_weighted_top1",
+          "expected_acpl_mean",
+          "expected_acpl_stdev",
+          "sample_size"
+        ],
+        "properties": {
+          "bucket_label": {
+            "type": "string",
+            "enum": [
+              "≤1200",
+              "1201-1500",
+              "1501-1800",
+              "1801-2100",
+              "2101-2400",
+              "2401+",
+              "rating-unknown"
+            ]
+          },
+          "rating_low": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "maximum": 3500
+          },
+          "rating_high": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "maximum": 3500
+          },
+          "expected_top1": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "description": "Expected mean of top-1 match rate (player move == Stockfish top move)."
+          },
+          "expected_weighted_top1": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "description": "Expected mean of complexity-weighted top-1 match rate."
+          },
+          "expected_acpl_mean": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 500.0,
+            "description": "Expected mean of Average Centipawn Loss for this bucket."
+          },
+          "expected_acpl_stdev": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 500.0,
+            "description": "Expected population standard deviation of ACPL for this bucket. Used to scale the acpl-analysis suspicion value."
+          },
+          "sample_size": {
+            "type": "integer",
+            "minimum": 100,
+            "description": "Number of games used to derive the population stats."
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "version": "1.0.0",
+  "generated_at": "2026-05-24T04:09:14Z",
+  "source_dataset": "hand-curated-stub (Phase 1 fallback; lit. values, not measured)",
+  "buckets": [
+    {
+      "bucket_label": "≤1200",
+      "rating_low": 1,
+      "rating_high": 1200,
+      "expected_top1": 0.32,
+      "expected_weighted_top1": 0.3,
+      "expected_acpl_mean": 85.0,
+      "expected_acpl_stdev": 35.0,
+      "sample_size": 100
+    },
+    {
+      "bucket_label": "1201-1500",
+      "rating_low": 1201,
+      "rating_high": 1500,
+      "expected_top1": 0.38,
+      "expected_weighted_top1": 0.36,
+      "expected_acpl_mean": 65.0,
+      "expected_acpl_stdev": 28.0,
+      "sample_size": 100
+    },
+    {
+      "bucket_label": "1501-1800",
+      "rating_low": 1501,
+      "rating_high": 1800,
+      "expected_top1": 0.45,
+      "expected_weighted_top1": 0.43,
+      "expected_acpl_mean": 48.0,
+      "expected_acpl_stdev": 22.0,
+      "sample_size": 100
+    },
+    {
+      "bucket_label": "1801-2100",
+      "rating_low": 1801,
+      "rating_high": 2100,
+      "expected_top1": 0.52,
+      "expected_weighted_top1": 0.5,
+      "expected_acpl_mean": 35.0,
+      "expected_acpl_stdev": 18.0,
+      "sample_size": 100
+    },
+    {
+      "bucket_label": "2101-2400",
+      "rating_low": 2101,
+      "rating_high": 2400,
+      "expected_top1": 0.6,
+      "expected_weighted_top1": 0.58,
+      "expected_acpl_mean": 25.0,
+      "expected_acpl_stdev": 14.0,
+      "sample_size": 100
+    },
+    {
+      "bucket_label": "2401+",
+      "rating_low": 2401,
+      "rating_high": 3500,
+      "expected_top1": 0.68,
+      "expected_weighted_top1": 0.66,
+      "expected_acpl_mean": 18.0,
+      "expected_acpl_stdev": 10.0,
+      "sample_size": 100
+    },
+    {
+      "bucket_label": "rating-unknown",
+      "rating_low": null,
+      "rating_high": null,
+      "expected_top1": 0.52,
+      "expected_weighted_top1": 0.5,
+      "expected_acpl_mean": 48.0,
+      "expected_acpl_stdev": 22.0,
+      "sample_size": 100
+    }
+  ]
+}

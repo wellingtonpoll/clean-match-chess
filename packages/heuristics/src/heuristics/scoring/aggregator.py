@@ -1,8 +1,12 @@
-"""Suspicion-score aggregation + bootstrap CI (FR-011).
+"""Suspicion-score aggregation + bootstrap CI (FR-011, FR-016).
 
 Weights live in `WEIGHTS` so a single deterministic source produces the
 final score. Bootstrap CI samples per-signal contributions with
 replacement N times.
+
+The Phase 1 (feature 004) weights add the new `acpl-analysis` signal at
+0.30 and reduce `engine-correlation/top1` from 0.15 to 0.05; the full
+distribution is specified by FR-016 and must sum to exactly 1.0.
 """
 
 from __future__ import annotations
@@ -17,16 +21,18 @@ from heuristics.scoring.thresholds import SCORING_THRESHOLDS_VERSION
 
 BOOTSTRAP_SAMPLES_DEFAULT: Final[int] = 1000
 
+# Phase 1 (feature 004) FR-016 distribution. Must sum to 1.0.
 WEIGHTS: Final[dict[str, float]] = {
-    "engine-correlation/weighted": 0.50,
-    "engine-correlation/top1": 0.15,
+    "acpl-analysis": 0.30,
+    "engine-correlation/weighted": 0.30,
+    "engine-correlation/top1": 0.05,
     "engine-correlation/top3": 0.05,
     "regime-shift": 0.10,
-    "tactical-detection": 0.05,
-    "complexity-analysis": 0.05,
+    "tactical-detection": 0.03,
+    "complexity-analysis": 0.03,
     "behavioral-patterns/precision-burst": 0.05,
-    "behavioral-patterns/blunder-suppression": 0.03,
-    "timing-analysis": 0.02,
+    "behavioral-patterns/blunder-suppression": 0.05,
+    "timing-analysis": 0.04,
 }
 
 
