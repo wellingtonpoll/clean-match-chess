@@ -57,6 +57,25 @@ class ReproducibilityManifest(BaseModel):
         pattern=r"^\d+\.\d+\.\d+(?:[-+].+)?$",
         description="Forensic-analytics design-system semver (feature 002 FR-016).",
     )
+    rating_baselines_sha256: str = Field(
+        default="0" * 64,
+        pattern=r"^[0-9a-f]{64}$",
+        description="sha256 of rating_baselines.json (feature 004 FR-012).",
+    )
+    rating_baselines_version: str = Field(
+        default="0.0.0",
+        pattern=r"^\d+\.\d+\.\d+(?:[-+].+)?$",
+        description="Semver of the bundled rating-baselines artifact.",
+    )
+    scoring_thresholds_version: str = Field(
+        default="0.0.0",
+        pattern=r"^\d+\.\d+\.\d+(?:[-+].+)?$",
+        description="SCORING_THRESHOLDS_VERSION at audit time (feature 004 FR-017).",
+    )
+    signal_versions: dict[str, str] = Field(
+        default_factory=dict,
+        description="Per-signal version strings (feature 004 FR-012/SC-010).",
+    )
 
 
 class FlaggedSegment(BaseModel):

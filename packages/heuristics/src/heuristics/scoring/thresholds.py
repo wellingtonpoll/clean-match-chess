@@ -19,7 +19,7 @@ from shared_types.score import (
     risk_level_for,
 )
 
-SCORING_THRESHOLDS_VERSION: Final[str] = "1.0.0"
+SCORING_THRESHOLDS_VERSION: Final[str] = "2.0.0"
 
 
 def thresholds_snapshot() -> dict[str, float | str]:

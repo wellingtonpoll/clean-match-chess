@@ -34,6 +34,10 @@ _HASH_FIELDS: Final[tuple[str, ...]] = (
     "opening_book_sha256",
     "input_pgn_sha256",
     "design_system_version",
+    "rating_baselines_sha256",
+    "rating_baselines_version",
+    "scoring_thresholds_version",
+    "signal_versions",
 )
 
 
@@ -46,6 +50,10 @@ def build_manifest(
     design_system_version: str,
     report_engine_version: str | None = None,
     started_at: datetime | None = None,
+    rating_baselines_sha256: str | None = None,
+    rating_baselines_version: str | None = None,
+    scoring_thresholds_version: str | None = None,
+    signal_versions: dict[str, str] | None = None,
 ) -> ReproducibilityManifest:
     return ReproducibilityManifest(
         engine_name=engine.name,
@@ -61,6 +69,10 @@ def build_manifest(
         started_at=started_at or datetime.now(UTC),
         host=_collect_host_info(),
         design_system_version=design_system_version,
+        rating_baselines_sha256=rating_baselines_sha256 or "0" * 64,
+        rating_baselines_version=rating_baselines_version or "0.0.0",
+        scoring_thresholds_version=scoring_thresholds_version or "0.0.0",
+        signal_versions=dict(signal_versions) if signal_versions else {},
     )
 
 

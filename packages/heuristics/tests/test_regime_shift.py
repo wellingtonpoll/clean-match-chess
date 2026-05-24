@@ -35,7 +35,7 @@ def test_segment_game_endgame_phase_when_few_pieces() -> None:
 def test_regime_shift_signal_version() -> None:
     v = signal_version()
     assert v.name == "regime-shift"
-    assert v.version == "0.1.0"
+    assert v.version == "2.0.0"
 
 
 def test_regime_shift_zero_when_one_segment() -> None:

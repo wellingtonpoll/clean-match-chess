@@ -64,6 +64,7 @@ def audit_game(
     code = execute(
         input, subject=subject, output=output,
         engine_path=engine_path, engine_image=engine_image,
+        book_path=book,
     )
     raise typer.Exit(code=code.value)
 
@@ -76,7 +77,10 @@ def audit_username(
     time_control: str | None = typer.Option(None, "--time-control"),
     depth: int = typer.Option(18, "--depth", min=1),
     multipv: int = typer.Option(5, "--multipv", min=1),
-    book: str | None = typer.Option(None, "--book"),
+    book: str | None = typer.Option(
+        None, "--book",
+        help="Path to a Polyglot .bin opening book; overrides bundled default.",
+    ),
     output: str = typer.Option("human", "--output"),
     language: str = typer.Option("en", "--language"),
     no_cache: bool = typer.Option(False, "--no-cache"),
@@ -102,6 +106,7 @@ def audit_username(
         output=output,
         engine_path=engine_path,
         engine_image=engine_image,
+        book_path=book,
     )
     raise typer.Exit(code=code.value)
 

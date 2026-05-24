@@ -189,9 +189,14 @@ def test_acpl_signal_dominates_for_low_rated_engine_perfect_player(
     )
 
     assert run.score is not None
-    # ACPL should be the top-ranked dominant signal because white loses
-    # only 10cp/move (very engine-like) while rated 1500.
-    assert "acpl-analysis" in run.score.dominant_signals
+    # After US5 (per-segment heuristic application), the per-segment
+    # acpl-analysis output is folded into segments-weighted-aggregate at
+    # the game level. The dominant_signals list now surfaces the carrier
+    # signal; the high-suspicion outcome is reflected in the HIGH risk
+    # level (the engine-perfect 10cp/move at rating 1500 still scores
+    # above the HIGH threshold).
+    assert "segments-weighted-aggregate" in run.score.dominant_signals
+    assert run.score.score >= 0.6
 
 
 def test_eval_delta_cp_populated_in_persisted_run(cleanmatch_home) -> None:

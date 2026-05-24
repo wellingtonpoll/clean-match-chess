@@ -94,12 +94,12 @@ Monorepo of Python packages under `packages/` plus apps under `apps/`. Paths bel
 
 ### Tests for User Story 2
 
-- [ ] T019 [P] [US2] Write `packages/heuristics/tests/test_blunder_suppression_v2.py` — covers US2 AS1/AS2/AS3: (a) a hand-crafted position where complexity > 0.6 and `top_moves[1]` has eval_delta_cp ≤ -200 and the played move has eval_delta_cp > -100 → counts as evaded → signal value 1.0; (b) a synthetic game with zero qualifying positions → samples=0, silenced; (c) the regression fixture where the OLD implementation produced a non-zero misleading value and the NEW one produces 0.0 — assert the values differ and the new one is correct per the contract.
+- [X] T019 [P] [US2] Write `packages/heuristics/tests/test_blunder_suppression_v2.py` — covers US2 AS1/AS2/AS3: (a) a hand-crafted position where complexity > 0.6 and `top_moves[1]` has eval_delta_cp ≤ -200 and the played move has eval_delta_cp > -100 → counts as evaded → signal value 1.0; (b) a synthetic game with zero qualifying positions → samples=0, silenced; (c) the regression fixture where the OLD implementation produced a non-zero misleading value and the NEW one produces 0.0 — assert the values differ and the new one is correct per the contract.
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Modify `packages/heuristics/src/heuristics/behavioral_patterns/__init__.py::blunder_suppression()` per FR-004. New signature should accept `moves` in addition to `positions` (the existing function only takes positions; this is an API addition, not a break, since the only caller is `pipeline/run.py`). Bump `__signal_version__` from `"0.1.0"` to `"2.0.0"` to reflect the breaking semantic change.
-- [ ] T021 [US2] Modify `packages/analysis-core/src/analysis_core/pipeline/run.py` `_build_run` to pass `moves` into `blunder_suppression(positions, moves)`. Update the line where the function is invoked.
+- [X] T020 [US2] Modify `packages/heuristics/src/heuristics/behavioral_patterns/__init__.py::blunder_suppression()` per FR-004. New signature should accept `moves` in addition to `positions` (the existing function only takes positions; this is an API addition, not a break, since the only caller is `pipeline/run.py`). Bump `__signal_version__` from `"0.1.0"` to `"2.0.0"` to reflect the breaking semantic change.
+- [X] T021 [US2] Modify `packages/analysis-core/src/analysis_core/pipeline/run.py` `_build_run` to pass `moves` into `blunder_suppression(positions, moves)`. Update the line where the function is invoked.
 
 **Checkpoint**: US2 fully functional; new and old behaviour distinguishable in regression test.
 
@@ -113,13 +113,13 @@ Monorepo of Python packages under `packages/` plus apps under `apps/`. Paths bel
 
 ### Tests for User Story 3
 
-- [ ] T022 [P] [US3] Write `packages/heuristics/tests/test_aggregator_bootstrap.py` — covers US3 AS1/AS2/AS3: (a) synthetic 120-ply input produces CI width ≤ 0.20; (b) synthetic 25-ply input with similar signal means produces CI width ≥ 1.5× the 120-ply case; (c) two runs with the same seed produce bit-identical CIs; (d) degenerate input (5 moves) returns CI = (0.0, 1.0).
+- [X] T022 [P] [US3] Write `packages/heuristics/tests/test_aggregator_bootstrap.py` — covers US3 AS1/AS2/AS3: (a) synthetic 120-ply input produces CI width ≤ 0.20; (b) synthetic 25-ply input with similar signal means produces CI width ≥ 1.5× the 120-ply case; (c) two runs with the same seed produce bit-identical CIs; (d) degenerate input (5 moves) returns CI = (0.0, 1.0).
 
 ### Implementation for User Story 3
 
-- [ ] T023 [US3] Modify `packages/heuristics/src/heuristics/scoring/aggregator.py`: rewrite `aggregate_score()` and `_bootstrap_ci()` per FR-007 + research.md R4. New signature: `aggregate_score(signals, *, positions=None, moves=None, bootstrap_samples=10000, seed=0)`. When `positions` and `moves` are provided, run the move-resampling bootstrap: per resample, pick N plies with replacement, recompute every heuristic on the resampled subset, then aggregate. Compute 2.5/97.5 percentiles. When `positions`/`moves` are NOT provided, fall back to legacy contribution-bootstrap (for callers that haven't migrated yet — but emit a `DeprecationWarning`). Bump `BOOTSTRAP_SAMPLES_DEFAULT` to 10000.
-- [ ] T024 [US3] Modify `packages/analysis-core/src/analysis_core/pipeline/run.py` `_build_run` to pass `positions` and `moves` into `aggregate_score()`. Confirm no caller still uses the legacy path; the DeprecationWarning should never trigger in normal repo usage.
-- [ ] T025 [US3] Add benchmark `packages/heuristics/tests/bench_aggregator.py` — measures aggregate_score() with 10000 bootstrap samples on a 200-ply synthetic game; asserts wall time ≤ 100 ms. Use `pytest-benchmark` if already a dep; otherwise plain `time.perf_counter()`.
+- [X] T023 [US3] Modify `packages/heuristics/src/heuristics/scoring/aggregator.py`: rewrite `aggregate_score()` and `_bootstrap_ci()` per FR-007 + research.md R4. New signature: `aggregate_score(signals, *, positions=None, moves=None, bootstrap_samples=10000, seed=0)`. When `positions` and `moves` are provided, run the move-resampling bootstrap: per resample, pick N plies with replacement, recompute every heuristic on the resampled subset, then aggregate. Compute 2.5/97.5 percentiles. When `positions`/`moves` are NOT provided, fall back to legacy contribution-bootstrap (for callers that haven't migrated yet — but emit a `DeprecationWarning`). Bump `BOOTSTRAP_SAMPLES_DEFAULT` to 10000.
+- [X] T024 [US3] Modify `packages/analysis-core/src/analysis_core/pipeline/run.py` `_build_run` to pass `positions` and `moves` into `aggregate_score()`. Confirm no caller still uses the legacy path; the DeprecationWarning should never trigger in normal repo usage.
+- [X] T025 [US3] Add benchmark `packages/heuristics/tests/bench_aggregator.py` — measures aggregate_score() with 10000 bootstrap samples on a 200-ply synthetic game; asserts wall time ≤ 100 ms. Use `pytest-benchmark` if already a dep; otherwise plain `time.perf_counter()`.
 
 **Checkpoint**: US3 functional; CI semantics now statistically meaningful.
 
@@ -133,12 +133,12 @@ Monorepo of Python packages under `packages/` plus apps under `apps/`. Paths bel
 
 ### Tests for User Story 4
 
-- [ ] T026 [P] [US4] Write `packages/analysis-core/tests/test_run_book_exclusion.py` — covers US4 AS1/AS3: feed the same Italian Game PGN through the pipeline twice (once with the bundled book loaded, once with an empty stub book) and assert the engine-correlation signal `samples` count differs by at least 10. Also assert `is_book == True` on the first ~12 plies under the bundled book.
+- [X] T026 [P] [US4] Write `packages/analysis-core/tests/test_run_book_exclusion.py` — covers US4 AS1/AS3: feed the same Italian Game PGN through the pipeline twice (once with the bundled book loaded, once with an empty stub book) and assert the engine-correlation signal `samples` count differs by at least 10. Also assert `is_book == True` on the first ~12 plies under the bundled book.
 
 ### Implementation for User Story 4
 
-- [ ] T027 [US4] Modify `apps/cli/src/cleanmatch_cli/main.py`. `audit_game` already declares `--book`; add the same `--book <PATH>` optional argument to `audit_username` (per FR-020 amendment — explicit flag addition, not a violation). Thread `book` value through to `run_single_game` and `run_username_batch`. When the flag is None, use `OpeningBook.default_path()`. Help text: `"--book PATH: path to Polyglot .bin file; overrides bundled default."` Acceptance: `cleanmatch audit-username --book /tmp/custom.bin USER` runs without error; `cleanmatch audit-username USER` (no flag) uses bundled default.
-- [ ] T028 [US4] Modify `packages/analysis-core/src/analysis_core/pipeline/run.py` `run_single_game` and `run_username_batch`: accept a `book_path: str | None = None` keyword arg. Pass through to `_analyse_positions`. When `book_path` is None, default to `OpeningBook.default_path()`. When `""` (explicit empty), pass a no-op book (no positions marked as book). Document the convention in the docstring.
+- [X] T027 [US4] Modify `apps/cli/src/cleanmatch_cli/main.py`. `audit_game` already declares `--book`; add the same `--book <PATH>` optional argument to `audit_username` (per FR-020 amendment — explicit flag addition, not a violation). Thread `book` value through to `run_single_game` and `run_username_batch`. When the flag is None, use `OpeningBook.default_path()`. Help text: `"--book PATH: path to Polyglot .bin file; overrides bundled default."` Acceptance: `cleanmatch audit-username --book /tmp/custom.bin USER` runs without error; `cleanmatch audit-username USER` (no flag) uses bundled default.
+- [X] T028 [US4] Modify `packages/analysis-core/src/analysis_core/pipeline/run.py` `run_single_game` and `run_username_batch`: accept a `book_path: str | None = None` keyword arg. Pass through to `_analyse_positions`. When `book_path` is None, default to `OpeningBook.default_path()`. When `""` (explicit empty), pass a no-op book (no positions marked as book). Document the convention in the docstring.
 
 **Checkpoint**: US4 functional; book exclusion active by default.
 
@@ -152,14 +152,14 @@ Monorepo of Python packages under `packages/` plus apps under `apps/`. Paths bel
 
 ### Tests for User Story 5
 
-- [ ] T029 [P] [US5] Write `packages/heuristics/tests/test_segment_aggregator.py` — covers US5 AS2/AS3 + SC-006: synthetic segments with identical signal values but different phase distributions; TACTICAL-concentrated game scores ≥ 30% higher than ENDGAME-concentrated; the sum of segment `score_contribution` equals the game score within 1e-9.
+- [X] T029 [P] [US5] Write `packages/heuristics/tests/test_segment_aggregator.py` — covers US5 AS2/AS3 + SC-006: synthetic segments with identical signal values but different phase distributions; TACTICAL-concentrated game scores ≥ 30% higher than ENDGAME-concentrated; the sum of segment `score_contribution` equals the game score within 1e-9.
 
 ### Implementation for User Story 5
 
-- [ ] T030 [US5] Create `packages/heuristics/src/heuristics/scoring/segment_aggregator.py` per `contracts/segment_score.contract.md`. Public API: `aggregate_segments(segments, positions, moves, baselines, subject_rating, subject_color) -> tuple[float, tuple[Segment, ...]]` — returns the game-level segment-weighted score AND the segments mutated with populated `signals` and `score_contribution`. Internally: for each segment, slice positions/moves by `segment.ply_range`, run per-segment heuristics (engine-correlation, acpl-analysis, blunder-suppression, timing-analysis when applicable), compute raw aggregate, then phase-weight and accumulate.
-- [ ] T031 [US5] Modify `packages/analysis-core/src/analysis_core/pipeline/run.py` `_build_run`: replace the current "run all heuristics on full game" flow with: (a) compute segments via existing `segment_game()`; (b) call `aggregate_segments()` to get the segment-weighted score and populated Segment objects; (c) compute game-level-only heuristics (regime-shift, precision-burst, complexity, tactical-detection, engine-correlation/top3) on the full positions/moves; (d) call `aggregate_score()` with the union of the segment-weighted score (as a synthetic SignalAggregate) and the game-level-only signals. Persisted `AuditRun.segments` now contains populated Segment objects.
+- [X] T030 [US5] Create `packages/heuristics/src/heuristics/scoring/segment_aggregator.py` per `contracts/segment_score.contract.md`. Public API: `aggregate_segments(segments, positions, moves, baselines, subject_rating, subject_color) -> tuple[float, tuple[Segment, ...]]` — returns the game-level segment-weighted score AND the segments mutated with populated `signals` and `score_contribution`. Internally: for each segment, slice positions/moves by `segment.ply_range`, run per-segment heuristics (engine-correlation, acpl-analysis, blunder-suppression, timing-analysis when applicable), compute raw aggregate, then phase-weight and accumulate.
+- [X] T031 [US5] Modify `packages/analysis-core/src/analysis_core/pipeline/run.py` `_build_run`: replace the current "run all heuristics on full game" flow with: (a) compute segments via existing `segment_game()`; (b) call `aggregate_segments()` to get the segment-weighted score and populated Segment objects; (c) compute game-level-only heuristics (regime-shift, precision-burst, complexity, tactical-detection, engine-correlation/top3) on the full positions/moves; (d) call `aggregate_score()` with the union of the segment-weighted score (as a synthetic SignalAggregate) and the game-level-only signals. Persisted `AuditRun.segments` now contains populated Segment objects.
 - [X] T032 [US5, RESOLVED — no action] `Segment` dataclass in `packages/shared-types/src/shared_types/signal.py` is `frozen=False` (default Python behavior); `signals: tuple[SignalAggregate, ...]` and `score_contribution: float | None` are assignable post-construction. No modification needed. If a future refactor adds `frozen=True`, switch to the `dataclasses.replace()` pattern documented in T030. This task is closed.
-- [ ] T033 [US5] Add unit test `packages/heuristics/tests/test_segment_phase_weights.py` — asserts the exact phase weights are OPENING=0.5, MIDDLEGAME=1.0, TACTICAL=1.5, CONVERSION=1.3, ENDGAME=0.7 (no drift); the constants are exported from the module so consumers/manifests can reference them.
+- [X] T033 [US5] Add unit test `packages/heuristics/tests/test_segment_phase_weights.py` — asserts the exact phase weights are OPENING=0.5, MIDDLEGAME=1.0, TACTICAL=1.5, CONVERSION=1.3, ENDGAME=0.7 (no drift); the constants are exported from the module so consumers/manifests can reference them.
 
 **Checkpoint**: US5 functional; per-segment signals visible in JSON export.
 
@@ -173,11 +173,11 @@ Monorepo of Python packages under `packages/` plus apps under `apps/`. Paths bel
 
 ### Tests for User Story 6
 
-- [ ] T034 [P] [US6] Write `packages/heuristics/tests/test_timing_regression.py` — covers US6 AS1/AS2/AS3: (a) regression fit on synthetic 30-move input produces expected residual signs; (b) pre-move sub-signal computes fraction of `time_spent_ms < 300` on non-trivial complexity; (c) combination weight 0.7 × residuals + 0.3 × premove; (d) no timing data → silenced; (e) per US6 independent test, slow-easy/fast-hard synthetic input flags > 70% of hard-position moves.
+- [X] T034 [P] [US6] Write `packages/heuristics/tests/test_timing_regression.py` — covers US6 AS1/AS2/AS3: (a) regression fit on synthetic 30-move input produces expected residual signs; (b) pre-move sub-signal computes fraction of `time_spent_ms < 300` on non-trivial complexity; (c) combination weight 0.7 × residuals + 0.3 × premove; (d) no timing data → silenced; (e) per US6 independent test, slow-easy/fast-hard synthetic input flags > 70% of hard-position moves.
 
 ### Implementation for User Story 6
 
-- [ ] T035 [US6] Rewrite `packages/heuristics/src/heuristics/timing_analysis/__init__.py::timing_anomaly()` per FR-006 + research.md R3. Use **`numpy.linalg.lstsq`** (NOT `polyfit`, which is 1-D only) on stacked features (complexity composite, phase ordinal per FR-006). Reference implementation:
+- [X] T035 [US6] Rewrite `packages/heuristics/src/heuristics/timing_analysis/__init__.py::timing_anomaly()` per FR-006 + research.md R3. Use **`numpy.linalg.lstsq`** (NOT `polyfit`, which is 1-D only) on stacked features (complexity composite, phase ordinal per FR-006). Reference implementation:
 
   ```python
   import numpy as np
@@ -191,7 +191,7 @@ Monorepo of Python packages under `packages/` plus apps under `apps/`. Paths bel
   ```
 
   Compute residual stdev; signal value = fraction of moves with `|residual| > 2 × stdev`. Combine with pre-move rate per US6 AS2 (final = 0.7 × residual_rate + 0.3 × premove_rate). Bump `__signal_version__` from `"0.1.0"` to `"2.0.0"`.
-- [ ] T036 [US6] Confirm `packages/analysis-core/src/analysis_core/pipeline/run.py` continues to pass the right inputs to the new `timing_anomaly()` (signature unchanged). Update the segment_aggregator (T030) to optionally invoke timing per segment when ≥ 50% of segment moves have timing data.
+- [X] T036 [US6] Confirm `packages/analysis-core/src/analysis_core/pipeline/run.py` continues to pass the right inputs to the new `timing_anomaly()` (signature unchanged). Update the segment_aggregator (T030) to optionally invoke timing per segment when ≥ 50% of segment moves have timing data.
 
 **Checkpoint**: US6 functional.
 
@@ -205,12 +205,12 @@ Monorepo of Python packages under `packages/` plus apps under `apps/`. Paths bel
 
 ### Tests for User Story 7
 
-- [ ] T037 [P] [US7] Write `packages/heuristics/tests/test_regime_shift_cusum.py` — covers US7 AS1/AS2/AS3: (a) synthetic ACPL series with a true change point → CUSUM k=4 detects in expected range; (b) **1000 stationary noise series generated with `numpy.random.default_rng(seed=42)`** (e.g., `[rng.normal(0, 1, size=200) for _ in range(1000)]`) → false-positive rate ≤ **1.5%** (0.5% cushion above the 1.0% target to prevent flakiness from BLAS/LAPACK float drift across platforms — constitution Principle II prohibits flaky tests); (c) game < 10 non-book plies → 0.0 with 0-sample aggregate; (d) monotonically improving series does NOT trigger (per edge case).
+- [X] T037 [P] [US7] Write `packages/heuristics/tests/test_regime_shift_cusum.py` — covers US7 AS1/AS2/AS3: (a) synthetic ACPL series with a true change point → CUSUM k=4 detects in expected range; (b) **1000 stationary noise series generated with `numpy.random.default_rng(seed=42)`** (e.g., `[rng.normal(0, 1, size=200) for _ in range(1000)]`) → false-positive rate ≤ **1.5%** (0.5% cushion above the 1.0% target to prevent flakiness from BLAS/LAPACK float drift across platforms — constitution Principle II prohibits flaky tests); (c) game < 10 non-book plies → 0.0 with 0-sample aggregate; (d) monotonically improving series does NOT trigger (per edge case).
 
 ### Implementation for User Story 7
 
-- [ ] T038 [US7] Rewrite `packages/heuristics/src/heuristics/regime_shift/__init__.py::regime_shift_score()` per FR-005 + research.md R5. New signature: `regime_shift_score(positions, moves, k_sigma=4.0) -> SignalAggregate`. Compute ACPL series from `move.eval_delta_cp` over non-book plies; apply CUSUM with `k = k_sigma * running_sigma`; count change points; normalize signal to [0,1] via `min(1.0, count / 3.0)`. Bump `__signal_version__` to `"2.0.0"`.
-- [ ] T039 [US7] Confirm `packages/analysis-core/src/analysis_core/pipeline/run.py` invokes `regime_shift_score(positions, moves)` with updated args. Update segment_aggregator to NOT call regime-shift per-segment (it's a game-level-only signal per `contracts/segment_score.contract.md`).
+- [X] T038 [US7] Rewrite `packages/heuristics/src/heuristics/regime_shift/__init__.py::regime_shift_score()` per FR-005 + research.md R5. New signature: `regime_shift_score(positions, moves, k_sigma=4.0) -> SignalAggregate`. Compute ACPL series from `move.eval_delta_cp` over non-book plies; apply CUSUM with `k = k_sigma * running_sigma`; count change points; normalize signal to [0,1] via `min(1.0, count / 3.0)`. Bump `__signal_version__` to `"2.0.0"`.
+- [X] T039 [US7] Confirm `packages/analysis-core/src/analysis_core/pipeline/run.py` invokes `regime_shift_score(positions, moves)` with updated args. Update segment_aggregator to NOT call regime-shift per-segment (it's a game-level-only signal per `contracts/segment_score.contract.md`).
 
 **Checkpoint**: US7 functional.
 
@@ -224,13 +224,13 @@ Monorepo of Python packages under `packages/` plus apps under `apps/`. Paths bel
 
 ### Tests for User Story 8
 
-- [ ] T040 [P] [US8] Write `packages/heuristics/tests/test_engine_correlation_v2.py` — covers US8 AS1/AS2/AS3: (a) ratio = observed / expected for top-1 and weighted top-1; (b) all 6 rating buckets + rating-unknown queryable; (c) missing rating → rating-unknown bucket used; (d) US8 independent test (1200 vs 2700 with same 75% top-1 → ratios differ by ≥ 1.5).
+- [X] T040 [P] [US8] Write `packages/heuristics/tests/test_engine_correlation_v2.py` — covers US8 AS1/AS2/AS3: (a) ratio = observed / expected for top-1 and weighted top-1; (b) all 6 rating buckets + rating-unknown queryable; (c) missing rating → rating-unknown bucket used; (d) US8 independent test (1200 vs 2700 with same 75% top-1 → ratios differ by ≥ 1.5).
 
 ### Implementation for User Story 8
 
-- [ ] T041 [US8] Modify `packages/heuristics/src/heuristics/engine_correlation/__init__.py::engine_correlation()`. Add `subject_rating: int | None` and `baselines: RatingBaselines` parameters. Compute the existing observed rates AND the ratios `observed / expected` for top-1, weighted-top-1, AND top-3. Store the ratio in `SignalAggregate.weighted_mean` (interpretation: 1.0 = matches expectation; >1.0 = exceeds). Keep `SignalAggregate.mean` as the raw observed rate for backward compatibility with downstream consumers. If the rating bucket lookup does not include `expected_top3`, emit the top-3 SignalAggregate with `samples=0` (silenced; aggregator excludes silenced signals from weighted mean). Bump `__signal_version__` to `"2.0.0"`.
-- [ ] T042 [US8] Modify `packages/analysis-core/src/analysis_core/pipeline/run.py` `_build_run`: thread `subject_rating` and `baselines` into `engine_correlation()`. Update segment_aggregator (T030) similarly.
-- [ ] T042b [US8, BEFORE T043 implementation lands] Capture pre-H1-change baseline scores for delta documentation. Run on the test corpus before applying the piecewise normalization in T043:
+- [X] T041 [US8] Modify `packages/heuristics/src/heuristics/engine_correlation/__init__.py::engine_correlation()`. Add `subject_rating: int | None` and `baselines: RatingBaselines` parameters. Compute the existing observed rates AND the ratios `observed / expected` for top-1, weighted-top-1, AND top-3. Store the ratio in `SignalAggregate.weighted_mean` (interpretation: 1.0 = matches expectation; >1.0 = exceeds). Keep `SignalAggregate.mean` as the raw observed rate for backward compatibility with downstream consumers. If the rating bucket lookup does not include `expected_top3`, emit the top-3 SignalAggregate with `samples=0` (silenced; aggregator excludes silenced signals from weighted mean). Bump `__signal_version__` to `"2.0.0"`.
+- [X] T042 [US8] Modify `packages/analysis-core/src/analysis_core/pipeline/run.py` `_build_run`: thread `subject_rating` and `baselines` into `engine_correlation()`. Update segment_aggregator (T030) similarly.
+- [X] T042b [US8, BEFORE T043 implementation lands] Capture pre-H1-change baseline scores for delta documentation. Run on the test corpus before applying the piecewise normalization in T043:
 
   ```bash
   cleanmatch audit-game tests/fixtures/audit_v2_smoke.pgn --output json > /tmp/baseline_pre_H1.json
@@ -238,7 +238,7 @@ Monorepo of Python packages under `packages/` plus apps under `apps/`. Paths bel
   ```
 
   After T043 lands, repeat → `/tmp/baseline_post_H1.json`. Diff the `.score.score` values. Document representative deltas in the CHANGELOG v2.0.0 entry (T045): e.g. "Engine-correlation ratio normalization changed (H1). Sample deltas: greg589/game1: 0.464 → X.XXX (Δ +/-Y)". This is documentation work, not a gate — but maintainers need the numbers to explain v1→v2 score shifts to existing users.
-- [ ] T043 [US8] Modify `packages/heuristics/src/heuristics/scoring/aggregator.py`: when consuming engine-correlation signals, prefer `weighted_mean` (the new ratio) for the scoring contribution. Apply piecewise linear normalization centered at baseline (per FR-008 §Mapping + `contracts/segment_score.contract.md` §Normalization):
+- [X] T043 [US8] Modify `packages/heuristics/src/heuristics/scoring/aggregator.py`: when consuming engine-correlation signals, prefer `weighted_mean` (the new ratio) for the scoring contribution. Apply piecewise linear normalization centered at baseline (per FR-008 §Mapping + `contracts/segment_score.contract.md` §Normalization):
 
   ```python
   import numpy as np
@@ -260,17 +260,17 @@ Monorepo of Python packages under `packages/` plus apps under `apps/`. Paths bel
 
 **Purpose**: Version bumps, CHANGELOG, end-to-end determinism check, quickstart validation.
 
-- [ ] T044 Modify `packages/heuristics/src/heuristics/scoring/thresholds.py::SCORING_THRESHOLDS_VERSION` from `"1.0.0"` to `"2.0.0"` per FR-017.
-- [ ] T045 [P] Modify `CHANGELOG.md` at repo root: add a `## [2.0.0] — 2026-05-24` entry per FR-022 + SC-009. Explicitly state: scores from runs ≤ v1.x are NOT comparable; new `acpl-analysis` signal added; `blunder-suppression` bug fix; bootstrap methodology changed; bundled opening book + rating baselines included; signal versions bumped (regime-shift 2.0.0, timing-analysis 2.0.0, engine-correlation 2.0.0). Include the H1 sample deltas captured by T042b (e.g. "greg589/game1: 0.464 → X.XXX"). **Phase 1 scope note**: "Phase 1 ships the scoring pipeline + signal correctness. Empirical false-positive-rate validation against labeled corpora is deferred to Phase 2 (see deferred SC-001, SC-002)."
-- [ ] T046 [P] Modify `packages/heuristics/CHANGELOG.md`: per-signal bump entries with brief rationale per signal.
-- [ ] T047 [P] Modify `packages/analysis-core/CHANGELOG.md`: book integration + manifest stamping entries.
-- [ ] T048 [depends on T004b] Add end-to-end test `apps/cli/tests/test_audit_game_v2.py` — run `cleanmatch audit-game tests/fixtures/audit_v2_smoke.pgn`, assert: (a) `manifest.scoring_thresholds_version == "2.0.0"`; (b) `manifest.opening_book_sha256` is non-zero; (c) `manifest.rating_baselines_version` is non-zero; (d) `dominant_signals` contains `acpl-analysis` if the game is non-trivial; (e) all `Move.eval_delta_cp` are populated; (f) all `Segment.signals` and `score_contribution` are populated. File path is fixed — do not accept "whichever exists".
-- [ ] T049 Add determinism test `packages/heuristics/tests/test_determinism_v2.py` — run `aggregate_score()` twice on identical inputs with `seed=0`; bit-identical CI and dominant_signals.
-- [ ] T050 [P] Run `uv run ruff check .` from repo root; fix any new violations introduced by Phase 1.
-- [ ] T051 [P] Run `uv run mypy --strict packages/heuristics/src packages/analysis-core/src`; fix any type errors introduced. No new `# type: ignore` without inline justification (constitution Principle I).
-- [ ] T052 Run `uv run pytest --cov=packages --cov-report=term --cov-fail-under=85`; confirm coverage holds at ≥ 85% line / ≥ 80% branch on the new modules.
-- [ ] T053 Execute `quickstart.md` step-by-step manually; confirm every numbered step produces the expected output. Document any deviation in a follow-up issue.
-- [ ] T054 Final review against constitution: Principle I (code quality + no bloat), Principle II (tests for every new signal — confirm coverage), Principle III (no CLI flag changes), Principle IV (bench passes ≤ 100 ms). Sign off in PR description.
+- [X] T044 Modify `packages/heuristics/src/heuristics/scoring/thresholds.py::SCORING_THRESHOLDS_VERSION` from `"1.0.0"` to `"2.0.0"` per FR-017.
+- [X] T045 [P] Modify `CHANGELOG.md` at repo root: add a `## [2.0.0] — 2026-05-24` entry per FR-022 + SC-009. Explicitly state: scores from runs ≤ v1.x are NOT comparable; new `acpl-analysis` signal added; `blunder-suppression` bug fix; bootstrap methodology changed; bundled opening book + rating baselines included; signal versions bumped (regime-shift 2.0.0, timing-analysis 2.0.0, engine-correlation 2.0.0). Include the H1 sample deltas captured by T042b (e.g. "greg589/game1: 0.464 → X.XXX"). **Phase 1 scope note**: "Phase 1 ships the scoring pipeline + signal correctness. Empirical false-positive-rate validation against labeled corpora is deferred to Phase 2 (see deferred SC-001, SC-002)."
+- [X] T046 [P] Modify `packages/heuristics/CHANGELOG.md`: per-signal bump entries with brief rationale per signal.
+- [X] T047 [P] Modify `packages/analysis-core/CHANGELOG.md`: book integration + manifest stamping entries.
+- [X] T048 [depends on T004b] Add end-to-end test `apps/cli/tests/test_audit_game_v2.py` — run `cleanmatch audit-game tests/fixtures/audit_v2_smoke.pgn`, assert: (a) `manifest.scoring_thresholds_version == "2.0.0"`; (b) `manifest.opening_book_sha256` is non-zero; (c) `manifest.rating_baselines_version` is non-zero; (d) `dominant_signals` contains `acpl-analysis` if the game is non-trivial; (e) all `Move.eval_delta_cp` are populated; (f) all `Segment.signals` and `score_contribution` are populated. File path is fixed — do not accept "whichever exists".
+- [X] T049 Add determinism test `packages/heuristics/tests/test_determinism_v2.py` — run `aggregate_score()` twice on identical inputs with `seed=0`; bit-identical CI and dominant_signals.
+- [X] T050 [P] Run `uv run ruff check .` from repo root; fix any new violations introduced by Phase 1.
+- [X] T051 [P] Run `uv run mypy --strict packages/heuristics/src packages/analysis-core/src`; fix any type errors introduced. No new `# type: ignore` without inline justification (constitution Principle I).
+- [X] T052 Run `uv run pytest --cov=packages --cov-report=term --cov-fail-under=85`; confirm coverage holds at ≥ 85% line / ≥ 80% branch on the new modules.
+- [X] T053 Execute `quickstart.md` step-by-step manually; confirm every numbered step produces the expected output. Document any deviation in a follow-up issue.
+- [X] T054 Final review against constitution: Principle I (code quality + no bloat), Principle II (tests for every new signal — confirm coverage), Principle III (no CLI flag changes), Principle IV (bench passes ≤ 100 ms). Sign off in PR description.
 
 ---
 

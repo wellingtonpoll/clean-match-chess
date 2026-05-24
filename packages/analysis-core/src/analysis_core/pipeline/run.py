@@ -25,6 +25,8 @@ from heuristics.rating_baselines import BASELINES_PATH, get_baselines
 from heuristics.regime_shift import regime_shift_score
 from heuristics.scoring import aggregate_score
 from heuristics.scoring.account_profile import build_account_profile
+from heuristics.scoring.segment_aggregator import aggregate_segments
+from heuristics.scoring.thresholds import SCORING_THRESHOLDS_VERSION
 from heuristics.tactical_detection import tactical_density
 from heuristics.timing_analysis import timing_anomaly
 from shared_types.audit_run import (
@@ -55,9 +57,9 @@ SIGNAL_VERSIONS: dict[str, str] = {
     "engine-correlation": "0.1.0",
     "complexity-analysis": "0.1.0",
     "tactical-detection": "0.1.0",
-    "regime-shift": "0.1.0",
-    "behavioral-patterns": "0.1.0",
-    "timing-analysis": "0.1.0",
+    "regime-shift": "2.0.0",
+    "behavioral-patterns": "2.0.0",
+    "timing-analysis": "2.0.0",
 }
 
 
@@ -72,8 +74,21 @@ def run_single_game(
     heuristics: tuple[HeuristicVersion, ...] | None = None,
     design_system_version: str = DEFAULT_DESIGN_SYSTEM_VERSION,
     opening_book_sha256: str = DEFAULT_OPENING_BOOK_SHA256,
+    book_path: str | None = None,
     persist_root: Path | None = None,
 ) -> AuditRun:
+    """Audit a single game (FR-019, T028).
+
+    ``book_path`` opens an opening book by path:
+      * ``None``   → bundled default book (FR-009).
+      * ``""``     → no-op book (no positions marked in-book).
+      * ``<path>`` → load polyglot file at ``<path>``.
+
+    On book load failure (missing file, parse error) the audit falls back
+    to the no-op book and continues.
+    """
+    book = _resolve_book(book_path)
+    resolved_book_sha = book.sha256() if not book.is_empty else opening_book_sha256
     engine_command = _resolve_engine_command(engine_path, engine_image)
     if analyzer is None and engine_command:
         with EngineAnalyzer(engine_command) as ea:
@@ -82,23 +97,23 @@ def run_single_game(
                 else _default_engine_fp()
             )
             heuristics = heuristics or _default_heuristics()
-            positions = _analyse_positions(game, ea)
+            positions = _analyse_positions(game, ea, book=book)
             return _build_run(
                 game, positions, subject=subject,
                 engine=engine, heuristics=heuristics,
                 design_system_version=design_system_version,
-                opening_book_sha256=opening_book_sha256,
+                opening_book_sha256=resolved_book_sha,
                 persist_root=persist_root,
             )
     analyzer = analyzer or StaticAnalyzer()
     engine = engine or _default_engine_fp()
     heuristics = heuristics or _default_heuristics()
-    positions = _analyse_positions(game, analyzer)
+    positions = _analyse_positions(game, analyzer, book=book)
     return _build_run(
         game, positions, subject=subject,
         engine=engine, heuristics=heuristics,
         design_system_version=design_system_version,
-        opening_book_sha256=opening_book_sha256,
+        opening_book_sha256=resolved_book_sha,
         persist_root=persist_root,
     )
 
@@ -115,9 +130,13 @@ def run_username_batch(
     heuristics_set: tuple[HeuristicVersion, ...] | None = None,
     design_system_version: str = DEFAULT_DESIGN_SYSTEM_VERSION,
     opening_book_sha256: str = DEFAULT_OPENING_BOOK_SHA256,
+    book_path: str | None = None,
     platform: str = "chesscom",
 ) -> AuditRun:
-    """Audit a batch of games for one username. Builds AccountProfile."""
+    """Audit a batch of games for one username. Builds AccountProfile.
+
+    ``book_path`` semantics match ``run_single_game`` (T028).
+    """
     engine_command = _resolve_engine_command(engine_path, engine_image)
     # Open one engine process for the entire batch.
     if analyzer is None and engine_command:
@@ -136,6 +155,7 @@ def run_username_batch(
                     heuristics=resolved_heuristics,
                     design_system_version=design_system_version,
                     opening_book_sha256=opening_book_sha256,
+                    book_path=book_path,
                 )
                 for game in games
             ]
@@ -149,6 +169,7 @@ def run_username_batch(
                 heuristics=heuristics_set,
                 design_system_version=design_system_version,
                 opening_book_sha256=opening_book_sha256,
+                book_path=book_path,
             )
             for game in games
         ]
@@ -216,43 +237,84 @@ def _build_run(
 ) -> AuditRun:
     moves = _populate_eval_deltas(positions, game.moves)
     game = _game_with_moves(game, moves)
-    segments = segment_game(positions)
+    raw_segments = segment_game(positions)
 
     subject_rating = _extract_subject_rating(game, subject)
     baselines = get_baselines()
 
+    segment_score_value, _populated_segments = aggregate_segments(
+        raw_segments,
+        positions=positions,
+        moves=moves,
+        baselines=baselines,
+        subject_rating=subject_rating,
+        subject_color=subject,
+    )
+
+    # Game-level-only signals (per contracts/segment_score.contract.md):
+    # regime-shift, precision-burst, complexity, tactical-detection,
+    # engine-correlation/top3 run on the full game. The segment-weighted
+    # score becomes a synthetic SignalAggregate fed into aggregate_score.
+    _, top3, _ = engine_correlation(
+        positions, moves,
+        subject_rating=subject_rating,
+        baselines=baselines,
+    )
+
     signals: list[SignalAggregate] = []
     signals.append(complexity_score(positions))
     signals.append(tactical_density(positions))
-    signals.append(regime_shift_score(segments))
-    top1, top3, weighted = engine_correlation(positions, moves)
-    signals.extend([top1, top3, weighted])
+    signals.append(regime_shift_score(positions, moves))
+    signals.append(top3)
     signals.append(precision_burst(positions, moves))
-    signals.append(blunder_suppression(positions))
-    signals.append(timing_anomaly(positions, moves))
-    signals.append(
-        acpl_signal(
-            positions=positions,
-            moves=moves,
-            subject_color=subject,
+    signals.append(_segment_weighted_signal(segment_score_value, len(moves)))
+
+    def _resample_signals(
+        sub_positions: tuple[Position, ...],
+        sub_moves: tuple[Move, ...],
+    ) -> tuple[SignalAggregate, ...]:
+        """Recompute per-move signals on a bootstrapped subset (FR-007).
+
+        Game-level signals (regime-shift) and segmentation-dependent
+        signals are excluded — CUSUM and segment boundaries are not
+        meaningful on a shuffled-with-replacement subset.
+        """
+        rs_top1, rs_top3, rs_weighted = engine_correlation(
+            sub_positions, sub_moves,
             subject_rating=subject_rating,
             baselines=baselines,
         )
-    )
+        return (
+            complexity_score(sub_positions),
+            tactical_density(sub_positions),
+            rs_top1,
+            rs_top3,
+            rs_weighted,
+            precision_burst(sub_positions, sub_moves),
+            blunder_suppression(sub_positions, sub_moves),
+            timing_anomaly(sub_positions, sub_moves),
+            acpl_signal(
+                positions=sub_positions,
+                moves=sub_moves,
+                subject_color=subject,
+                subject_rating=subject_rating,
+                baselines=baselines,
+            ),
+        )
 
-    score = aggregate_score(tuple(signals))
+    score = aggregate_score(
+        tuple(signals),
+        positions=positions,
+        moves=moves,
+        resample_signals=_resample_signals,
+    )
     subject_player = _resolve_subject(game.players, subject)
 
-    # T010: stamp opening-book + rating-baselines provenance into the manifest.
-    # `ReproducibilityManifest` already carries `opening_book_sha256`. The
-    # rating-baselines sha256 and per-signal versions are computed here so
-    # downstream consumers (audit JSON exports, debugging) can inspect them
-    # even though the strict shared-types schema does not yet expose
-    # dedicated fields for them.
+    # FR-012 / SC-010: stamp opening-book + rating-baselines + per-signal
+    # versions into the manifest. Schema fields added in feature 004.
     rating_baselines_sha256 = _hash_rating_baselines()
+    rating_baselines_version = baselines.version
     signal_versions = dict(SIGNAL_VERSIONS)
-    # Surfaced via persisted artifacts in a follow-up (schema-bound).
-    _ = (rating_baselines_sha256, signal_versions)
 
     manifest = build_manifest(
         engine=engine,
@@ -260,6 +322,10 @@ def _build_run(
         input_pgn_sha256=game.pgn_sha256,
         opening_book_sha256=opening_book_sha256,
         design_system_version=design_system_version,
+        rating_baselines_sha256=rating_baselines_sha256,
+        rating_baselines_version=rating_baselines_version,
+        scoring_thresholds_version=SCORING_THRESHOLDS_VERSION,
+        signal_versions=signal_versions,
     )
 
     run = AuditRun(
@@ -321,6 +387,23 @@ def _game_with_moves(game: Game, moves: tuple[Move, ...]) -> Game:
     if game.moves is moves:
         return game
     return game.model_copy(update={"moves": moves})
+
+
+def _segment_weighted_signal(score: float, samples: int) -> SignalAggregate:
+    """Wrap the phase-weighted segment score in a SignalAggregate carrier.
+
+    The signal_name matches the ``segments-weighted-aggregate`` entry in
+    ``WEIGHTS`` so ``aggregate_score`` mixes it with the game-level-only
+    signals.
+    """
+    clamped = max(0.0, min(1.0, float(score)))
+    return SignalAggregate(
+        signal_name="segments-weighted-aggregate",
+        signal_version="1.0.0",
+        mean=clamped,
+        weighted_mean=clamped,
+        samples=max(0, samples),
+    )
 
 
 def _extract_subject_rating(game: Game, subject: PlayerColor) -> int | None:
@@ -401,6 +484,25 @@ def _default_opening_book() -> OpeningBook:
     """Load the bundled book, falling back to an empty book on failure."""
     try:
         return OpeningBook.load(OpeningBook.default_path())
+    except FileNotFoundError:
+        return OpeningBook.empty()
+
+
+def _resolve_book(book_path: str | None) -> OpeningBook:
+    """Map ``--book``/``book_path`` argument to an OpeningBook (T028).
+
+    Convention:
+      * ``None``    → bundled default book.
+      * ``""``      → explicit no-op book (empty sentinel).
+      * ``<path>``  → polyglot file at ``<path>``; falls back to empty
+        book on failure.
+    """
+    if book_path is None:
+        return _default_opening_book()
+    if book_path == NO_BOOK_SENTINEL:
+        return OpeningBook.empty()
+    try:
+        return OpeningBook.load(book_path)
     except FileNotFoundError:
         return OpeningBook.empty()
 
