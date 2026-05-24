@@ -162,9 +162,9 @@ def _engine_perfect_eval_series(n_positions: int) -> list[int | None]:
     series: list[int | None] = []
     for ply in range(n_positions):
         if ply % 2 == 0:
-            series.append(0)      # White to move
+            series.append(0)  # White to move
         else:
-            series.append(10)     # Black to move; means white is up 10 cp
+            series.append(10)  # Black to move; means white is up 10 cp
     return series
 
 
@@ -218,6 +218,7 @@ def test_eval_delta_cp_populated_in_persisted_run(cleanmatch_home) -> None:
 
     # Read the persisted game.json to confirm eval_delta_cp is populated.
     import json
+
     game_path = cleanmatch_home / "runs" / run.id / "game.json"
     persisted = json.loads(game_path.read_text())
     for move in persisted["moves"]:
@@ -237,6 +238,7 @@ def test_acpl_samples_count_matches_white_eligible_plies(cleanmatch_home) -> Non
     positions = _analyse_positions(game, analyzer, book=OpeningBook.empty())
     # Manually populate deltas to feed acpl_signal directly.
     from analysis_core.pipeline.run import _populate_eval_deltas
+
     moves = _populate_eval_deltas(positions, game.moves)
     sig = acpl_signal(
         positions=positions,

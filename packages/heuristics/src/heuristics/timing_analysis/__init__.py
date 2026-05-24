@@ -50,7 +50,8 @@ def timing_anomaly(
 ) -> SignalAggregate:
     n = min(len(positions), len(moves))
     eligible_idx = [
-        i for i in range(n)
+        i
+        for i in range(n)
         if moves[i].time_spent_ms is not None and positions[i].complexity is not None
     ]
     if len(eligible_idx) < _MIN_TIMED:
@@ -63,15 +64,11 @@ def timing_anomaly(
         ],
         dtype=np.float64,
     )
-    times_ms = np.asarray(
-        [moves[i].time_spent_ms for i in eligible_idx], dtype=np.float64
-    )
+    times_ms = np.asarray([moves[i].time_spent_ms for i in eligible_idx], dtype=np.float64)
     log_times = np.log(times_ms + 1.0)
 
     if phase_ordinals is not None and len(phase_ordinals) >= n:
-        phases = np.asarray(
-            [phase_ordinals[i] for i in eligible_idx], dtype=np.float64
-        )
+        phases = np.asarray([phase_ordinals[i] for i in eligible_idx], dtype=np.float64)
         features = np.column_stack([complexity_scores, phases])
     else:
         features = complexity_scores.reshape(-1, 1)
@@ -89,7 +86,8 @@ def timing_anomaly(
         residual_rate = float(anomalies / len(eligible_idx))
 
     premove_eligible = [
-        i for i in eligible_idx
+        i
+        for i in eligible_idx
         if positions[i].complexity is not None
         and positions[i].complexity.composite > _PREMOVE_COMPLEXITY_THRESHOLD  # type: ignore[union-attr]
     ]
@@ -97,15 +95,15 @@ def timing_anomaly(
         premove_rate = 0.0
     else:
         premoves = sum(
-            1 for i in premove_eligible
-            if (moves[i].time_spent_ms or 0) < _PREMOVE_MS_THRESHOLD
+            1 for i in premove_eligible if (moves[i].time_spent_ms or 0) < _PREMOVE_MS_THRESHOLD
         )
         premove_rate = premoves / len(premove_eligible)
 
     value = float(
         np.clip(
             _RESIDUAL_WEIGHT * residual_rate + _PREMOVE_WEIGHT * premove_rate,
-            0.0, 1.0,
+            0.0,
+            1.0,
         )
     )
     return SignalAggregate(

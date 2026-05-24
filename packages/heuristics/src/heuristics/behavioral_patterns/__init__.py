@@ -91,8 +91,7 @@ def blunder_suppression(
         if pos.eval_cp is None or len(pos.top_moves) < 2:
             continue
         has_blunder = any(
-            cand.eval_cp is not None
-            and (cand.eval_cp - pos.eval_cp) <= _BLUNDER_CANDIDATE_DELTA_CP
+            cand.eval_cp is not None and (cand.eval_cp - pos.eval_cp) <= _BLUNDER_CANDIDATE_DELTA_CP
             for cand in pos.top_moves[1:]
         )
         if not has_blunder:

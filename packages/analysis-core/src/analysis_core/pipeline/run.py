@@ -93,14 +93,16 @@ def run_single_game(
     if analyzer is None and engine_command:
         with EngineAnalyzer(engine_command) as ea:
             engine = engine or (
-                engine_fingerprint_from_path(engine_path) if engine_path
-                else _default_engine_fp()
+                engine_fingerprint_from_path(engine_path) if engine_path else _default_engine_fp()
             )
             heuristics = heuristics or _default_heuristics()
             positions = _analyse_positions(game, ea, book=book)
             return _build_run(
-                game, positions, subject=subject,
-                engine=engine, heuristics=heuristics,
+                game,
+                positions,
+                subject=subject,
+                engine=engine,
+                heuristics=heuristics,
                 design_system_version=design_system_version,
                 opening_book_sha256=resolved_book_sha,
                 persist_root=persist_root,
@@ -110,8 +112,11 @@ def run_single_game(
     heuristics = heuristics or _default_heuristics()
     positions = _analyse_positions(game, analyzer, book=book)
     return _build_run(
-        game, positions, subject=subject,
-        engine=engine, heuristics=heuristics,
+        game,
+        positions,
+        subject=subject,
+        engine=engine,
+        heuristics=heuristics,
         design_system_version=design_system_version,
         opening_book_sha256=resolved_book_sha,
         persist_root=persist_root,
@@ -141,8 +146,7 @@ def run_username_batch(
     # Open one engine process for the entire batch.
     if analyzer is None and engine_command:
         resolved_engine = engine or (
-            engine_fingerprint_from_path(engine_path) if engine_path
-            else _default_engine_fp()
+            engine_fingerprint_from_path(engine_path) if engine_path else _default_engine_fp()
         )
         resolved_heuristics = heuristics_set or _default_heuristics()
         with EngineAnalyzer(engine_command) as ea:
@@ -256,7 +260,8 @@ def _build_run(
     # engine-correlation/top3 run on the full game. The segment-weighted
     # score becomes a synthetic SignalAggregate fed into aggregate_score.
     _, top3, _ = engine_correlation(
-        positions, moves,
+        positions,
+        moves,
         subject_rating=subject_rating,
         baselines=baselines,
     )
@@ -280,7 +285,8 @@ def _build_run(
         meaningful on a shuffled-with-replacement subset.
         """
         rs_top1, rs_top3, rs_weighted = engine_correlation(
-            sub_positions, sub_moves,
+            sub_positions,
+            sub_moves,
             subject_rating=subject_rating,
             baselines=baselines,
         )
@@ -452,17 +458,13 @@ def _analyse_positions(
     resolved_book = book if book is not None else _default_opening_book()
     board = chess.Board()
     positions: list[Position] = []
-    positions.append(
-        _attach_book_flag(analyzer.analyse(board, ply=0), board, resolved_book)
-    )
+    positions.append(_attach_book_flag(analyzer.analyse(board, ply=0), board, resolved_book))
     for ply, move in enumerate(game.moves, start=1):
         chess_move = chess.Move.from_uci(move.uci)
         if chess_move not in board.legal_moves:
             break
         board.push(chess_move)
-        positions.append(
-            _attach_book_flag(analyzer.analyse(board, ply=ply), board, resolved_book)
-        )
+        positions.append(_attach_book_flag(analyzer.analyse(board, ply=ply), board, resolved_book))
     return tuple(positions)
 
 

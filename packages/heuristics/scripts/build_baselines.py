@@ -21,6 +21,7 @@ Usage:
     python build_baselines.py [--dry-run] [--seed SEED] [--month YYYY-MM]
         [--output PATH]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -32,9 +33,7 @@ from pathlib import Path
 # Pin a specific Lichess monthly export for reproducibility.
 DEFAULT_MONTH = "2025-06"
 DEFAULT_SEED = 0
-DEFAULT_OUTPUT = (
-    Path(__file__).resolve().parents[1] / "data" / "rating_baselines.json"
-)
+DEFAULT_OUTPUT = Path(__file__).resolve().parents[1] / "data" / "rating_baselines.json"
 
 BUCKET_DEFINITIONS: tuple[tuple[str, int | None, int | None], ...] = (
     ("≤1200", 1, 1200),
@@ -116,12 +115,14 @@ def build_buckets_real(month: str, seed: int) -> list[dict[str, object]]:
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Generate rating_baselines.json")
     p.add_argument(
-        "--dry-run", action="store_true",
+        "--dry-run",
+        action="store_true",
         help="Emit hand-curated stub values (no dataset download). Phase 1 fallback.",
     )
     p.add_argument("--seed", type=int, default=DEFAULT_SEED)
-    p.add_argument("--month", default=DEFAULT_MONTH,
-                   help="Lichess month export (YYYY-MM). Default: 2025-06.")
+    p.add_argument(
+        "--month", default=DEFAULT_MONTH, help="Lichess month export (YYYY-MM). Default: 2025-06."
+    )
     p.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = p.parse_args(argv)
 

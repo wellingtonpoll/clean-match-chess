@@ -122,9 +122,7 @@ def test_six_ply_sequence_signs() -> None:
 
 
 def test_moves_beyond_positions_are_passed_through_unchanged() -> None:
-    positions = (
-        _position(0, 0, PlayerColor.WHITE),
-    )
+    positions = (_position(0, 0, PlayerColor.WHITE),)
     moves = (
         _move(0, PlayerColor.WHITE),  # no positions[1] available
     )

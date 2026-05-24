@@ -95,9 +95,7 @@ class EngineAnalyzer:
         depth: int = 18,
         multipv: int = MAX_MULTIPV,
     ) -> None:
-        self._command: str | list[str] = (
-            command if isinstance(command, list) else str(command)
-        )
+        self._command: str | list[str] = command if isinstance(command, list) else str(command)
         self._depth = depth
         self._multipv = max(1, min(multipv, MAX_MULTIPV))
         self._engine: chess.engine.SimpleEngine | None = None

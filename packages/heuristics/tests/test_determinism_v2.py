@@ -82,12 +82,20 @@ def test_aggregate_score_bit_identical_for_same_seed() -> None:
     positions = tuple(_position(i) for i in range(n))
     moves = tuple(_move(i) for i in range(n))
     a = aggregate_score(
-        signals, positions=positions, moves=moves,
-        bootstrap_samples=1000, seed=42, resample_signals=_resample,
+        signals,
+        positions=positions,
+        moves=moves,
+        bootstrap_samples=1000,
+        seed=42,
+        resample_signals=_resample,
     )
     b = aggregate_score(
-        signals, positions=positions, moves=moves,
-        bootstrap_samples=1000, seed=42, resample_signals=_resample,
+        signals,
+        positions=positions,
+        moves=moves,
+        bootstrap_samples=1000,
+        seed=42,
+        resample_signals=_resample,
     )
     assert a.model_dump() == b.model_dump()
 
