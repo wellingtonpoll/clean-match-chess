@@ -3,6 +3,13 @@
 All signal modules versioned independently. See `docs/heuristics.md`
 for the per-signal table.
 
+## Unreleased (Feature 005 Phase 2)
+
+No signal version changes (FR-010). When `rating_baselines.json` is
+regenerated from real Lichess 2026-04 data (feature 005 US1), this entry
+will record the dataset URL + sha256 and the smoke-test score delta vs
+the Phase 1 stub baseline.
+
 ## 2.0.0 — 2026-05-24 (Feature 004 Phase 1)
 
 Per-signal bumps and rationale:

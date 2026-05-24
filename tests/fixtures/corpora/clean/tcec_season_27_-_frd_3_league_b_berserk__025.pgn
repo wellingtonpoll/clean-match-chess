@@ -1,0 +1,40 @@
+[Event "TCEC Season 27 - FRD 3 League B"]
+[Site "https://tcec-chess.com"]
+[Date "2025.02.06"]
+[Round "11.1"]
+[White "Berserk 20250113"]
+[Black "Viridithas 16.0.0-dev-2482e38e"]
+[Result "1-0"]
+[WhiteElo "3652"]
+[WhiteTitle "BOT"]
+[BlackElo "3564"]
+[BlackTitle "BOT"]
+[TimeControl "1800+3"]
+[Termination "adjudication - SyzygyTB"]
+[FEN "rbknqrbn/pppppppp/8/8/8/8/PPPPPPPP/RBKNQRBN w KQkq - 0 1"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Round 11"]
+[ChapterName "Berserk 20250113 - Viridithas 16.0.0-dev-2482e38e"]
+[SetUp "1"]
+[BroadcastName "TCEC Double Fischer Random Chess 3 | League B"]
+[BroadcastURL "https://lichess.org/broadcast/tcec-double-fischer-random-chess-3--league-b/round-11/Yq6PGu6P"]
+[GameURL "https://lichess.org/broadcast/tcec-double-fischer-random-chess-3--league-b/round-11/Yq6PGu6P/SGicLkVY"]
+
+1. f4 a6 2. e4 f6 3. Ng3 e5 4. f5 Qe7 5. Ne3 a5 6. a4 Ba7 7. c3 Bb3 8. d3 Bg8
+9. Qe2 Nc6 10. Bf2 Re8 11. O-O Nf7 12. Ba2 Nd6 13. Bxg8 Rxg8 14. Nd5 Qf7 15.
+Rfb1 Kb8 16. Kh1 Bxf2 17. Qxf2 Ne7 18. Nxe7 Qxe7 19. b4 g6 20. c4 axb4 21. c5
+Nf7 22. Rxb4 Nd8 23. Qc2 Nc6 24. Rbb1 Na5 25. Qc3 c6 26. Rd1 d6 27. cxd6 Qxd6
+28. Rab1 Ra6 29. Ne2 gxf5 30. exf5 c5 31. Rb5 b6 32. Ng3 Rc8 33. Ne4 Qd8 34.
+Rdb1 Ka7 35. h3 Nc6 36. Qc4 Rc7 37. Kh2 h5 38. Rf1 Rb7 39. Rbb1 Nb4 40. Ra1 Ra5
+41. Rf3 Nd5 42. Rg3 Qd7 43. Qb3 Qc6 44. Rg8 Rb8 45. Rg6 Rb7 46. Ra2 Rh7 47. Rg8
+h4 48. Ra1 Re7 49. Rd8 Rd7 50. Re8 Qc7 51. Ra2 Nb4 52. Rd2 Nd5 53. Rh8 Qc6 54.
+Rxh4 Rxa4 55. Rh6 b5 56. Rc2 c4 57. dxc4 bxc4 58. Qb1 Ra6 59. Qg1+ Qb6 60.
+Qxb6+ Rxb6 61. Rxc4 Rd8 62. Rc2 Ne3 63. Re2 Nxf5 64. Rxf6 Rxf6 65. Nxf6 Rf8 66.
+Nd7 Rg8 67. Nxe5 Ng3 68. Rf2 Ne4 69. Rf4 Nc5 70. h4 Kb6 71. h5 Rg5 72. g4 Rxe5
+73. h6 Nd7 74. h7 Re8 75. Kg3 Rh8 76. Rf7 Kc6 77. g5 Ne5 78. Rg7 Kd6 79. Kh4
+Kd5 80. Kh5 Ke6 81. Rb7 Rd8 82. g6 Kf6 83. g7 Rd2 84. g8=N+ Ke6 85. Nh6 Rh2+
+86. Kg5 Rg2+ 87. Kf4 Rf2+ 88. Kg3 Rf3+ 89. Kg2 Rf8 90. Ng8 Nf7 91. Re7+ Kd5 92.
+Rxf7 1-0
+

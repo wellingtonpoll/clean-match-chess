@@ -103,6 +103,46 @@ jobs:
             packages/design-system/tests/unit/test_audit_lexical.py \
             --no-cov
 
+  fpr_gate:
+    # Feature 005 — labeled-corpus false-positive-rate gate (FR-006, SC-003).
+    # Path filter scopes execution to PRs that could affect scoring;
+    # branch protection on `main` is the mechanism that makes this REQUIRED
+    # for merge — configure that in the GitHub UI / API after this lands.
+    if: |
+      contains(toJson(github.event.pull_request.labels.*.name), 'scoring')
+      || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    needs: test
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b  # v8.1.0
+        with:
+          version: "0.11.5"
+      - run: uv python install 3.12
+      - run: uv sync --all-packages --all-extras
+      - name: Restore engine-analysis cache
+        uses: actions/cache@v4
+        with:
+          path: tests/fixtures/corpora/.cache
+          # Cache invalidates when the engine, the bundled book, or any
+          # corpus PGN changes — keeping stale analyses out of fresh runs.
+          key: fpr-gate-${{ hashFiles('packages/analysis-core/data/opening_book.bin', 'tests/fixtures/corpora/clean/**/*.pgn', 'tests/fixtures/corpora/engine_assisted/**/*.pgn') }}
+          restore-keys: |
+            fpr-gate-
+      - name: Run FPR gate
+        run: |
+          uv run pytest tests/fpr_gate/test_fpr_gate.py -v -m fpr_gate --no-cov
+      - name: Upload FPR gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fpr-gate-report
+          path: tests/fixtures/corpora/fpr_gate_report.json
+          if-no-files-found: ignore
+
   sc007_onboarding_log:
     if: contains(github.event.pull_request.labels.*.name, 'onboarding-event')
     runs-on: ubuntu-latest

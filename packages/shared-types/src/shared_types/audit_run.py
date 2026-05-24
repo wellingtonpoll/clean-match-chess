@@ -8,6 +8,7 @@ from enum import StrEnum
 from pydantic import BaseModel, ConfigDict, Field
 
 from shared_types.game import PlayerRef
+from shared_types.report import ReproducibilityManifest
 from shared_types.score import SuspicionScore
 from shared_types.signal import HeuristicVersion
 
@@ -77,7 +78,13 @@ class AccountProfile(BaseModel):
 
 
 class AuditRun(BaseModel):
-    """Top-level audit-run record persisted under ~/.cleanmatch/runs/<id>/."""
+    """Top-level audit-run record persisted under ~/.cleanmatch/runs/<id>/.
+
+    ``manifest`` (feature 005 FR-003 / US4) is the reproducibility provenance
+    attached in-band by the pipeline. ``None`` for legacy / cached AuditRun
+    objects that pre-date the field; populated for any audit produced by the
+    v2.0.0 pipeline.
+    """
 
     model_config = ConfigDict(frozen=False, extra="forbid")
 
@@ -92,6 +99,7 @@ class AuditRun(BaseModel):
     account_profile: AccountProfile | None = None
     status: RunStatus = RunStatus.PENDING
     error: RunError | None = None
+    manifest: ReproducibilityManifest | None = None
 
     def model_post_init(self, __context: object) -> None:
         if self.mode is RunMode.SINGLE_GAME and self.account_profile is not None:

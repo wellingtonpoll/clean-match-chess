@@ -140,9 +140,10 @@ Overall average: **60-90% token reduction** on common development operations.
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at `specs/004-scoring-v2-phase1/plan.md`. Cross-feature dependency on
-`specs/001-fairplay-analysis/plan.md` (defines the existing heuristics surface
-this feature refactors), `specs/002-design-system/plan.md` (report-engine
-consumer of the new scoring output), and `specs/003-repo-health-hardening/plan.md`
-(CI / quality gates that govern this work).
+at `specs/005-scoring-v2-phase2/plan.md`. Cross-feature dependency on
+`specs/004-scoring-v2-phase1/plan.md` (defines the scoring pipeline this
+phase validates + provisions production artifacts for),
+`specs/003-repo-health-hardening/plan.md` (CI / quality gates the new
+FPR-gate job extends), and `specs/002-design-system/plan.md` (report-engine
+consumer of the manifest provenance fields exposed by US4).
 <!-- SPECKIT END -->

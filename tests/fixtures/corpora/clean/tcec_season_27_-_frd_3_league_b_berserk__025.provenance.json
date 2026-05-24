@@ -1,0 +1,7 @@
+{
+  "source": "https://database.lichess.org/broadcast/lichess_db_broadcast_2025-02-03-04.pgn.zst",
+  "retrieved_at": "2026-05-24T22:30:31Z",
+  "label": "clean",
+  "label_confidence": "high",
+  "notes": "OTB broadcast game (TCEC Season 27 - FRD 3 League B) \u2014 arbiter-monitored at play time. Source: Lichess broadcast archive lichess_db_broadcast_2025-02-03-04 (CC-BY-SA 4.0). Players: Berserk 20250113 vs Viridithas 16.0.0-dev-2482e38e."
+}

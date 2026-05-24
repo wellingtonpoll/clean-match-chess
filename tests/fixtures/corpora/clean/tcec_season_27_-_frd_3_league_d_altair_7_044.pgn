@@ -1,0 +1,37 @@
+[Event "TCEC Season 27 - FRD 3 League D"]
+[Site "https://tcec-chess.com"]
+[Date "2025.02.11"]
+[Round "10.1"]
+[White "Altair 7.1.5-e489e46e"]
+[Black "Velvet 8.1.0"]
+[Result "1-0"]
+[WhiteElo "3529"]
+[WhiteTitle "BOT"]
+[BlackElo "3489"]
+[BlackTitle "BOT"]
+[TimeControl "1800+3"]
+[Termination "adjudication - SyzygyTB"]
+[FEN "rqbnkbnr/pppppppp/8/8/8/8/PPPPPPPP/RQBNKBNR w KQkq - 0 1"]
+[Variant "Standard"]
+[ECO "?"]
+[Opening "?"]
+[StudyName "Round 10"]
+[ChapterName "Altair 7.1.5-e489e46e - Velvet 8.1.0"]
+[SetUp "1"]
+[BroadcastName "TCEC Double Fischer Random Chess 3 | League D"]
+[BroadcastURL "https://lichess.org/broadcast/tcec-double-fischer-random-chess-3--league-d/round-10/Uv2CfbDT"]
+[GameURL "https://lichess.org/broadcast/tcec-double-fischer-random-chess-3--league-d/round-10/Uv2CfbDT/3xhSI0i2"]
+
+1. e4 Nc6 2. c3 g6 3. d4 d6 4. Qc2 Nf6 5. Bg5 h6 6. Bh4 Bg7 7. f4 O-O 8. Ne3 e5
+9. dxe5 dxe5 10. f5 b5 11. Bxf6 Bxf6 12. Nd5 Bd8 13. Qd2 Kh7 14. Bd3 Ne7 15.
+Ne3 gxf5 16. exf5 Ng8 17. O-O-O Qb6 18. Nh3 Bb7 19. Qe2 Nf6 20. Bxb5 Be7 21.
+Bc4 Bc5 22. Nd5 Bxd5 23. Bxd5 c6 24. Bc4 e4 25. Kb1 Qc7 26. Bb3 Qe7 27. Rhe1 e3
+28. Nf4 Qe4+ 29. Nd3 Bb6 30. a4 Rg8 31. g3 Kg7 32. a5 Bxa5 33. Qxe3 Qxe3 34.
+Rxe3 Rgb8 35. Kc2 Rb7 36. Re2 Rf8 37. Bc4 Bb6 38. Ne5 h5 39. Nxc6 Rc7 40. Ne5
+Re8 41. b3 a5 42. Kb2 Bc5 43. Rde1 Ng4 44. Nxg4 Rxe2+ 45. Rxe2 hxg4 46. Re4 Kf6
+47. Rxg4 Bg1 48. h4 Rc8 49. h5 Bf2 50. h6 Rf8 51. Bd3 Rh8 52. Ra4 Bxg3 53. Rxa5
+Bf4 54. Rd5 Bxh6 55. b4 Rb8 56. Kb3 Bf8 57. b5 Kg7 58. c4 Rc8 59. b6 Rb8 60.
+Rb5 Be7 61. Kc3 Bd6 62. Kd4 f6 63. c5 Be5+ 64. Kc4 Rd8 65. Rb3 Kh6 66. c6 Kg5
+67. Kb5 Rb8 68. Rb4 Bd6 69. Rd4 Bh2 70. Rd7 Kg4 71. b7 Kf3 72. Kb6 Bf4 73. c7
+Bxc7+ 74. Kxc7 Rf8 75. b8=Q Rxb8 76. Kxb8 1-0
+
