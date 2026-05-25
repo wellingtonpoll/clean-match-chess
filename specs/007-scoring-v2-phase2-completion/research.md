@@ -57,7 +57,9 @@ Eight technical decisions taken before implementation. Each carries Rationale + 
 
 ## R5 — Stockfish source: SF16 via Docker (fallback `shutil.which`)
 
-**Decision**: Default `--stockfish-cmd "docker run --rm -i cleanmatch-stockfish:sf16"`. T003 builds the image from `infra/docker/stockfish.Dockerfile`. Fallback: `shutil.which("stockfish")` if Docker unavailable.
+**Decision**: Default `--stockfish-cmd "docker run --rm -i cleanmatch-stockfish:sf16"`. T003 builds the image from `infra/docker/stockfish.Dockerfile`. `podman` is accepted as a drop-in for `docker` on the maintainer machine (Dockerfile + `run --rm -i` CLI work unchanged). Fallback: `shutil.which("stockfish")` if neither runtime available.
+
+**Recorded artefacts** (this maintainer machine, 2026-05-25): podman 4.9.3, image tag `cleanmatch-stockfish:sf16`, image id `513d26669882`, Stockfish binary sha256 `0a646b82f8577a9a5a617cf062de17886637b3056a80cda93f0e260a682ef17d`.
 
 **Rationale**: SF16 binary sha256 already stamped in `engine_binary_sha256` for any cached `tests/fixtures/corpora/.cache/` entries (from 005). Pinning SF16 keeps `.cache/` reusable and matches the FPR-gate's `actions/cache@v4` key. `EngineAnalyzer` already accepts a `list[str]` command form (`packages/analysis-core/src/analysis_core/engine/analysis.py:85-88`) — zero code change needed in the engine wrapper.
 
