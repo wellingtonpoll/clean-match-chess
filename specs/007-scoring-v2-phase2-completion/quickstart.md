@@ -6,10 +6,14 @@ One-command recipes per phase. All paths repo-relative; assume `uv` installed an
 
 ```bash
 # Verify dump present + capture sha256
+mkdir -p /tmp/baselines-007
 sha256sum lichess_db_standard_rated_2026-04.pgn.zst | tee /tmp/baselines-007/notes.txt
-# Verify Docker SF16 image
-docker run --rm cleanmatch-stockfish:sf16 stockfish <<< 'quit' | head -1
+
+# Verify SF16 image (podman is the canonical runtime on this maintainer
+# machine; `docker` works identically if installed).
+podman run --rm cleanmatch-stockfish:sf16 <<< 'quit' | head -1
 #  must include "Stockfish 16"
+
 # Verify zstd installed
 zstd --version | head -1
 ```
@@ -26,7 +30,7 @@ jq '.score.score, .manifest.rating_baselines_sha256' /tmp/pre_007.json
 ```bash
 uv run python packages/heuristics/scripts/build_baselines.py \
   --input-zst ./lichess_db_standard_rated_2026-04.pgn.zst \
-  --stockfish-cmd "docker run --rm -i cleanmatch-stockfish:sf16" \
+  --stockfish-cmd "podman run --rm -i cleanmatch-stockfish:sf16" \
   --workers 6 --depth 12 --seed 0 --per-bucket-sample 5000 \
   --output packages/heuristics/data/rating_baselines.json
 ```

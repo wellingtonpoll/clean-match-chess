@@ -35,6 +35,7 @@ import hashlib
 import io
 import json
 import random
+import re
 import statistics
 import subprocess
 import sys
@@ -261,35 +262,61 @@ def _open_zst_stream(zst_path: Path) -> subprocess.Popen[bytes]:
     )
 
 
+_HEADER_RE = re.compile(r'^\[(\w+)\s+"([^"]*)"\]')
+
+
 def _stream_pgn_games(zst_path: Path) -> Iterator[tuple[dict[str, str], str]]:
     """Stream `(headers, pgn_text)` pairs from a zst-compressed PGN archive.
 
-    Uses python-chess `chess.pgn.read_game` against an `io.TextIOWrapper`
-    fed by `zstd -d -c` subprocess stdout. Yields only the raw PGN text +
-    header dict — no parsed board state is retained between iterations.
+    Raw-text parser: PGN files use a strict format (header block of
+    ``[Tag "value"]`` lines, blank line, move block, blank line, next game).
+    Scanning line-by-line + regex-extracting headers is ~30× faster than
+    running python-chess's full move parser over every game when the
+    overwhelming majority will be rejected by the filter. The move text
+    is preserved as raw bytes so the per-bucket sampler can persist it to
+    a checkpoint without re-streaming.
     """
-    import chess.pgn  # lazy: only the maintainer machine needs python-chess
-
     proc = _open_zst_stream(zst_path)
     assert proc.stdout is not None
     stream = io.TextIOWrapper(proc.stdout, encoding="utf-8", errors="replace")
     try:
-        while True:
-            offset = stream.tell() if hasattr(stream, "tell") else None
-            try:
-                game = chess.pgn.read_game(stream)
-            except (UnicodeDecodeError, ValueError) as e:
-                print(
-                    f"[warn] skipping malformed game at offset {offset}: {e}",
-                    file=sys.stderr,
-                )
+        buf: list[str] = []
+        headers: dict[str, str] = {}
+        in_moves = False
+        for line in stream:
+            buf.append(line)
+            stripped = line.rstrip()
+            if stripped.startswith("["):
+                if in_moves and headers:
+                    # Header line that arrived while we were in moves — the
+                    # previous game ended without a trailing blank line.
+                    # Yield it now and start a new game.
+                    yield headers, "".join(buf[:-1])
+                    buf = [line]
+                    headers = {}
+                    in_moves = False
+                m = _HEADER_RE.match(stripped)
+                if m:
+                    headers[m.group(1)] = m.group(2)
                 continue
-            if game is None:
-                break
-            headers = dict(game.headers)
-            # Materialise the PGN text so we can persist it to a checkpoint
-            # later without keeping the parsed Game in memory.
-            yield headers, str(game)
+            if not stripped:
+                if headers and not in_moves:
+                    # Transition: end of header block, moves block begins.
+                    in_moves = True
+                    continue
+                if in_moves:
+                    # End of moves block — emit the game.
+                    yield headers, "".join(buf)
+                    buf = []
+                    headers = {}
+                    in_moves = False
+                continue
+            # Non-blank, non-header line — only meaningful inside the move
+            # block. If we land here before headers / move-block boundary
+            # the line is dropped (commentary or junk between games).
+        # Flush trailing game without a terminating blank line.
+        if buf and headers:
+            yield headers, "".join(buf)
     finally:
         stream.close()
         proc.wait()
@@ -336,13 +363,18 @@ def reservoir_sample(
                 file=sys.stderr,
             )
 
-        # Estimate move count from header to avoid parsing the moves twice.
-        # PlyCount header is reliably emitted by Lichess; fall back to
-        # 0 (rejected) when missing rather than re-parsing.
-        try:
-            move_count = int(headers.get("PlyCount", "0"))
-        except ValueError:
-            move_count = 0
+        # Estimate move count from the buffered PGN text. The Lichess monthly
+        # export does NOT emit a PlyCount header, so we count occurrences of
+        # the per-ply clock annotation `{ [%clk` which appears exactly once
+        # per ply on Lichess move lines.
+        ply_header = headers.get("PlyCount")
+        if ply_header is not None:
+            try:
+                move_count = int(ply_header)
+            except ValueError:
+                move_count = pgn_text.count("{ [%clk")
+        else:
+            move_count = pgn_text.count("{ [%clk")
 
         label = _passes_filter(headers, move_count)
         if label is None:
