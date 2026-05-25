@@ -31,9 +31,11 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import hashlib
 import io
 import json
+import multiprocessing as mp
 import random
 import re
 import statistics
@@ -270,7 +272,7 @@ def _stream_pgn_games(zst_path: Path) -> Iterator[tuple[dict[str, str], str]]:
 
     Raw-text parser: PGN files use a strict format (header block of
     ``[Tag "value"]`` lines, blank line, move block, blank line, next game).
-    Scanning line-by-line + regex-extracting headers is ~30× faster than
+    Scanning line-by-line + regex-extracting headers is ~30x faster than
     running python-chess's full move parser over every game when the
     overwhelming majority will be rejected by the filter. The move text
     is preserved as raw bytes so the per-bucket sampler can persist it to
@@ -521,6 +523,93 @@ def analyse_game(pgn_text: str, analyzer: Analyzer) -> GameStats:
     )
 
 
+# ─── Process-pool workers (real-engine parallel path) ────────────────────
+#
+# Each worker process owns one Stockfish subprocess for its entire lifetime
+# (Stockfish startup is too expensive to do per-task). The pool initialiser
+# stores the analyzer in module-level globals — the executor's pickle path
+# never needs to serialise the engine itself, only the small `(label, pgn)`
+# work items.
+
+_WORKER_ANALYZER: Analyzer | None = None
+
+
+def _worker_init(stockfish_cmd: str, depth: int) -> None:
+    global _WORKER_ANALYZER
+    _WORKER_ANALYZER = StockfishAnalyzer(stockfish_cmd, depth=depth)
+
+
+def _worker_analyse(work: tuple[str, str]) -> tuple[str, GameStats]:
+    """Worker task: analyse one (label, pgn_text) pair. Runs in a subprocess."""
+    label, pgn = work
+    if _WORKER_ANALYZER is None:
+        raise RuntimeError("worker not initialised — call _worker_init first")
+    return label, analyse_game(pgn, _WORKER_ANALYZER)
+
+
+def analyse_samples_parallel(
+    samples: dict[str, list[str]],
+    *,
+    stockfish_cmd: str,
+    depth: int,
+    workers: int,
+    progress_every: int = 100,
+) -> dict[str, BucketStats]:
+    """Parallel engine analysis using a `ProcessPoolExecutor`.
+
+    Each worker spawns its own Stockfish process (one engine per worker, kept
+    alive for the worker's full lifetime). Used for the real T007 run on a
+    multi-core maintainer machine. The single-engine `analyse_samples` path
+    is kept for tests and the `workers=1` fallback (avoids subprocess +
+    pickle overhead on tiny inputs).
+    """
+    # Build per-bucket stats containers up front so we can stream results in.
+    out: dict[str, BucketStats] = {}
+    for label, low, high in BUCKET_DEFINITIONS:
+        out[label] = BucketStats(label=label, rating_low=low, rating_high=high)
+
+    # Flatten work list — order doesn't matter to the per-bucket aggregator.
+    work: list[tuple[str, str]] = [
+        (label, pgn) for label, pgns in samples.items() for pgn in pgns
+    ]
+    total = len(work)
+    print(
+        f"[analyse] starting {workers} workers over {total:,} games (depth={depth})",
+        file=sys.stderr,
+    )
+    start = time.time()
+
+    ctx = mp.get_context("spawn")  # clean subprocess state; safer than fork w/ subprocess engines
+    completed = 0
+    with concurrent.futures.ProcessPoolExecutor(
+        max_workers=workers,
+        mp_context=ctx,
+        initializer=_worker_init,
+        initargs=(stockfish_cmd, depth),
+    ) as pool:
+        for label, game_stats in pool.map(_worker_analyse, work, chunksize=4):
+            if game_stats.eligible_plies > 0:
+                out[label].games.append(game_stats)
+            completed += 1
+            if completed % progress_every == 0:
+                elapsed = time.time() - start
+                rate = completed / elapsed if elapsed > 0 else 0.0
+                eta = (total - completed) / rate if rate > 0 else float("inf")
+                print(
+                    f"[analyse] {completed:,}/{total:,} ({rate:.1f}/s, "
+                    f"ETA {eta / 60:.1f}min)",
+                    file=sys.stderr,
+                )
+
+    elapsed = time.time() - start
+    print(
+        f"[analyse] DONE — {completed:,} games in {elapsed / 60:.1f}min "
+        f"({completed / elapsed:.1f}/s)",
+        file=sys.stderr,
+    )
+    return out
+
+
 def analyse_samples(
     samples: dict[str, list[str]],
     analyzer_factory: Callable[[], Analyzer],
@@ -680,12 +769,18 @@ def build_buckets_real(
     analyzer_factory: Callable[[], Analyzer],
     checkpoint_dir: Path,
     resume: bool,
+    parallel_workers: int = 1,
+    parallel_stockfish_cmd: str | None = None,
+    parallel_depth: int = DEFAULT_DEPTH,
 ) -> tuple[list[dict[str, object]], str]:
     """Real-data baseline build. Two-phase: stream + sample, then analyse.
 
-    The Stockfish depth is captured by ``analyzer_factory`` at construction
-    time (see ``StockfishAnalyzer.__init__``); not threaded through this
-    signature to avoid an unused-parameter lint warning.
+    The Stockfish depth + command for the parallel path are accepted as
+    explicit parameters (rather than re-derived from `analyzer_factory`)
+    because the `ProcessPoolExecutor` initializer needs picklable args —
+    closures captured by the factory are not portable across workers. When
+    ``parallel_workers <= 1`` the sequential `analyse_samples` path runs
+    with the supplied factory, preserving the test-injection seam.
 
     Returns:
         (buckets, archive_sha256). The sha256 is computed once at start so
@@ -721,7 +816,15 @@ def build_buckets_real(
         raise SystemExit(f"FR-001 violation — insufficient samples after streaming: {msg}")
 
     # Phase 2: engine analysis per bucket.
-    stats_by_bucket = analyse_samples(samples, analyzer_factory)
+    if parallel_workers > 1 and parallel_stockfish_cmd is not None:
+        stats_by_bucket = analyse_samples_parallel(
+            samples,
+            stockfish_cmd=parallel_stockfish_cmd,
+            depth=parallel_depth,
+            workers=parallel_workers,
+        )
+    else:
+        stats_by_bucket = analyse_samples(samples, analyzer_factory)
 
     # Assemble 6 rated + 1 rating-unknown (elementwise median).
     rated: list[BucketStats] = [stats_by_bucket[label] for label, _, _ in BUCKET_DEFINITIONS]
@@ -842,6 +945,9 @@ def main(argv: list[str] | None = None) -> int:
             analyzer_factory=_factory,
             checkpoint_dir=args.resume_from,
             resume=True,
+            parallel_workers=args.workers,
+            parallel_stockfish_cmd=args.stockfish_cmd,
+            parallel_depth=args.depth,
         )
         source = f"lichess_db_standard_rated_{args.month} (sha256={archive_sha})"
 
