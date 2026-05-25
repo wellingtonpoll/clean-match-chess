@@ -139,6 +139,13 @@ export function GameRow({ game }: GameRowProps) {
     padding: '12px 16px',
     transition: 'background 0.2s',
     animation: game.status === 'done' || game.status === 'error' ? 'fade-up 0.3s ease-out forwards' : undefined,
+    // Clip any descendant overflow at the row boundary. Without this, a
+    // long signal-chip name (e.g. `behavioral-patterns/precision-burst`)
+    // forces the document `body` to grow horizontally, which in turn
+    // grants the chip container enough width that `flex-wrap: wrap` never
+    // fires. Clipping at the row level breaks that feedback loop —
+    // chips inside the row see a bounded container and wrap correctly.
+    overflow: 'hidden',
   }
 
   // Pending / analyzing skeleton
@@ -204,7 +211,24 @@ export function GameRow({ game }: GameRowProps) {
     )
   }
 
-  // Done state
+  // Done state — stacked layout (2026-05-25 redesign):
+  // The previous multi-column layout (game-info | ScoreBar 180px | right
+  // badge column) made the ScoreBar's horizontal position drift with
+  // player-name length. Long usernames such as `DaianyDias` pushed the
+  // score bar right; short usernames left it back at center. Cross-card
+  // misalignment broke the eye's ability to compare scores at a glance.
+  //
+  // New layout puts everything in a single content column to the right of
+  // the index gutter, so ScoreBar width and offset are constant per row
+  // regardless of name length:
+  //
+  //   [#idx]  RiskBadge ('ATENÇÃO' / 'SUSPEITO' / 'LOW')
+  //           PlayerWhite vs PlayerBlack — Result
+  //           Date | TimeControl | plies
+  //           [ScoreBar ============================ XX.X%]
+  //           IC [low%–high%]
+  //           [signal chips, max 3, ellipsis-truncated]
+  //           [PDF] [TXT]  (only when suspect)
   const expandedId = game.runId ? `expanded-${game.runId}` : `expanded-${game.idx}`
   return (
     <div style={rowStyle} data-testid="game-row" data-expanded={expanded ? 'true' : 'false'}>
@@ -226,11 +250,10 @@ export function GameRow({ game }: GameRowProps) {
           display: 'flex',
           alignItems: 'flex-start',
           gap: '12px',
-          flexWrap: 'wrap',
           cursor: canExpand ? 'pointer' : 'default',
         }}
       >
-        {/* Index */}
+        {/* Index gutter */}
         <span
           style={{
             fontFamily: 'JetBrains Mono, monospace',
@@ -244,14 +267,34 @@ export function GameRow({ game }: GameRowProps) {
           #{game.idx + 1}
         </span>
 
-        {/* Game info */}
-        <div style={{ flex: 1, minWidth: '200px' }}>
+        {/* Content column — everything stacks vertically here, ScoreBar
+            width is `flex: 1` of this column so it stays constant per row. */}
+        <div
+          data-testid="game-row__content"
+          style={{
+            flex: 1,
+            minWidth: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px',
+          }}
+        >
+          {/* Risk badge — above the player names per maintainer request
+              2026-05-25. Aligned left so eye can scan the column. */}
+          {game.riskLevel && (
+            <div data-testid="game-row__badge-row" style={{ display: 'flex' }}>
+              <RiskBadge risk={game.riskLevel} />
+            </div>
+          )}
+
+          {/* Players + result */}
           <div
+            data-testid="game-row__players"
             style={{
               fontSize: '13px',
               color: '#F2EFE8',
-              marginBottom: '2px',
               fontFamily: 'Space Grotesk, sans-serif',
+              lineHeight: 1.4,
             }}
           >
             {(() => {
@@ -267,6 +310,8 @@ export function GameRow({ game }: GameRowProps) {
               )
             })()}
           </div>
+
+          {/* Meta row — date, time control, plies */}
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             {parseDate(game.headers) && (
               <span className="label">{parseDate(game.headers)}</span>
@@ -278,12 +323,10 @@ export function GameRow({ game }: GameRowProps) {
               <span className="label">{game.plyCount} lances</span>
             )}
           </div>
-        </div>
 
-        {/* Score section */}
-        <div style={{ minWidth: '180px', flex: '0 0 180px' }}>
+          {/* ScoreBar — full content-column width, predictable offset per row */}
           {game.score !== undefined && (
-            <>
+            <div data-testid="game-row__score" style={{ marginTop: '2px' }}>
               <ScoreBar score={game.score} />
               {game.confidenceInterval && (
                 <div
@@ -294,74 +337,62 @@ export function GameRow({ game }: GameRowProps) {
                     marginTop: '3px',
                   }}
                 >
-                  IC [{(game.confidenceInterval[0] * 100).toFixed(1)}%–{(game.confidenceInterval[1] * 100).toFixed(1)}%]
+                  IC [{(game.confidenceInterval[0] * 100).toFixed(1)}%–
+                  {(game.confidenceInterval[1] * 100).toFixed(1)}%]
                 </div>
               )}
-            </>
+            </div>
           )}
-        </div>
 
-        {/* Right side: badge + export only. Dominant-signal chips render
-            on their own full-width wrap row below — moving them out of this
-            column prevents long signal names like
-            `behavioral-patterns/precision-burst` from expanding this column's
-            natural width and shoving the score section right (or wrapping
-            the whole column off the row). */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-end',
-            gap: '6px',
-            flexShrink: 0,
-            maxWidth: '160px',
-          }}
-        >
-          {game.riskLevel && <RiskBadge risk={game.riskLevel} />}
+          {/* Signal chips — each chip gets `flex: 0 1 auto` + `min-width: 0`
+              so that text-overflow ellipsis can actually fire when a single
+              chip's natural width exceeds the column. Without min-width: 0
+              the `white-space: nowrap` text sets the flex item's min-content
+              size to its full text width, defeating the ellipsis. */}
+          {game.dominantSignals && game.dominantSignals.length > 0 && (
+            <div
+              data-testid="game-row__chips"
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '4px',
+                marginTop: '2px',
+                minWidth: 0,
+              }}
+            >
+              {game.dominantSignals.slice(0, 3).map((sig) => (
+                <span
+                  key={sig}
+                  style={{
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontSize: '9px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.14em',
+                    padding: '1px 5px',
+                    border: '1px solid rgba(242,239,232,0.14)',
+                    color: '#7A7A80',
+                    flex: '0 1 auto',
+                    minWidth: 0,
+                    maxWidth: '100%',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title={sig}
+                >
+                  {sig}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Export buttons — only when the game is flagged as suspect */}
           {game.score !== undefined && game.score > 0.75 && game.runId && (
-            <ExportButton runId={game.runId} />
+            <div data-testid="game-row__export" style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
+              <ExportButton runId={game.runId} />
+            </div>
           )}
         </div>
-
-        {/* Dominant-signal chips occupy their own row by forcing
-            flex-basis: 100% inside the wrapping toggle. Chips themselves can
-            wrap to multiple lines if a single chip is wider than what fits
-            in the remaining width (e.g. very long signal names). */}
-        {game.dominantSignals && game.dominantSignals.length > 0 && (
-          <div
-            data-testid="game-row__chips"
-            style={{
-              flexBasis: '100%',
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '4px',
-              paddingLeft: '40px',
-              marginTop: '4px',
-            }}
-          >
-            {game.dominantSignals.slice(0, 3).map((sig) => (
-              <span
-                key={sig}
-                style={{
-                  fontFamily: 'JetBrains Mono, monospace',
-                  fontSize: '9px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.14em',
-                  padding: '1px 5px',
-                  border: '1px solid rgba(242,239,232,0.14)',
-                  color: '#7A7A80',
-                  maxWidth: '100%',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-                title={sig}
-              >
-                {sig}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Expanded "Análise detalhada" section (US2) */}
