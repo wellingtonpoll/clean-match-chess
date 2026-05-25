@@ -39,11 +39,14 @@ from shared_types.game import Game, Move, PlayerColor, PlayerRef, Position
 from shared_types.score import SuspicionScore
 from shared_types.signal import HeuristicVersion, SignalAggregate
 
+from analysis_core.db import cache as db_cache
 from analysis_core.engine.analysis import Analyzer, EngineAnalyzer, StaticAnalyzer
-from analysis_core.manifest import build_manifest
+from analysis_core.manifest import build_manifest, manifest_hash
 from analysis_core.pipeline.cache import cleanmatch_home, persist_manifest
 from analysis_core.pipeline.opening_book import OpeningBook
 from analysis_core.pipeline.segmentation import segment_game
+
+logger_db = __import__("structlog").get_logger("analysis_core.pipeline.cache_lookup")
 
 DEFAULT_OPENING_BOOK_SHA256 = "0" * 64
 DEFAULT_DESIGN_SYSTEM_VERSION = "0.1.0"
@@ -76,6 +79,7 @@ def run_single_game(
     opening_book_sha256: str = DEFAULT_OPENING_BOOK_SHA256,
     book_path: str | None = None,
     persist_root: Path | None = None,
+    no_cache: bool = False,
 ) -> AuditRun:
     """Audit a single game (FR-019, T028).
 
@@ -86,41 +90,84 @@ def run_single_game(
 
     On book load failure (missing file, parse error) the audit falls back
     to the no-op book and continues.
+
+    ``no_cache`` (feature 008): when True, skips both the Postgres cache
+    lookup AND the persist. Otherwise: a `(pgn_sha256, manifest_sha256)`
+    hit short-circuits the engine pipeline; a miss runs the full audit
+    and persists the result via `analysis_core.db.cache.persist`.
     """
     book = _resolve_book(book_path)
     resolved_book_sha = book.sha256() if not book.is_empty else opening_book_sha256
     engine_command = _resolve_engine_command(engine_path, engine_image)
+
+    resolved_engine = engine or (
+        engine_fingerprint_from_path(engine_path) if engine_path else _default_engine_fp()
+    )
+    resolved_heuristics = heuristics or _default_heuristics()
+
+    # Cache lookup (Phase 008/T014). Build a "preview" manifest containing
+    # every field that contributes to `manifest_hash` so the hash matches
+    # the manifest stamped inside `_build_run`. The remaining fields
+    # (`started_at`, `host`) are explicitly excluded from `manifest_hash`,
+    # so a hash collision is deterministic given identical inputs.
+    if not no_cache:
+        try:
+            preview_manifest = build_manifest(
+                engine=resolved_engine,
+                heuristics=resolved_heuristics,
+                input_pgn_sha256=game.pgn_sha256,
+                opening_book_sha256=resolved_book_sha,
+                design_system_version=design_system_version,
+                rating_baselines_sha256=_hash_rating_baselines(),
+                rating_baselines_version=get_baselines().version,
+                scoring_thresholds_version=SCORING_THRESHOLDS_VERSION,
+                signal_versions=dict(SIGNAL_VERSIONS),
+            )
+            pgn_sha256_bytes = bytes.fromhex(game.pgn_sha256)
+            manifest_sha256_bytes = bytes.fromhex(manifest_hash(preview_manifest))
+            cached = db_cache.lookup(pgn_sha256_bytes, manifest_sha256_bytes)
+            if cached is not None:
+                logger_db.info(
+                    "db.cache.hit",
+                    pgn_sha256=game.pgn_sha256[:16],
+                    manifest_sha256=manifest_hash(preview_manifest)[:16],
+                )
+                return cached
+        except (ValueError, AttributeError) as e:
+            logger_db.warning("db.cache.preview_failed", error=str(e))
+
     if analyzer is None and engine_command:
         with EngineAnalyzer(engine_command) as ea:
-            engine = engine or (
-                engine_fingerprint_from_path(engine_path) if engine_path else _default_engine_fp()
-            )
-            heuristics = heuristics or _default_heuristics()
             positions = _analyse_positions(game, ea, book=book)
-            return _build_run(
+            run = _build_run(
                 game,
                 positions,
                 subject=subject,
-                engine=engine,
-                heuristics=heuristics,
+                engine=resolved_engine,
+                heuristics=resolved_heuristics,
                 design_system_version=design_system_version,
                 opening_book_sha256=resolved_book_sha,
                 persist_root=persist_root,
             )
+            if not no_cache and run.manifest is not None:
+                db_cache.persist(run, run.manifest, game=game)
+            return run
+
     analyzer = analyzer or StaticAnalyzer()
-    engine = engine or _default_engine_fp()
-    heuristics = heuristics or _default_heuristics()
     positions = _analyse_positions(game, analyzer, book=book)
-    return _build_run(
+    run = _build_run(
         game,
         positions,
         subject=subject,
-        engine=engine,
-        heuristics=heuristics,
+        engine=resolved_engine,
+        heuristics=resolved_heuristics,
         design_system_version=design_system_version,
         opening_book_sha256=resolved_book_sha,
         persist_root=persist_root,
     )
+    if not no_cache and run.manifest is not None:
+        db_cache.persist(run, run.manifest, game=game)
+    return run
 
 
 def run_username_batch(
@@ -137,6 +184,7 @@ def run_username_batch(
     opening_book_sha256: str = DEFAULT_OPENING_BOOK_SHA256,
     book_path: str | None = None,
     platform: str = "chesscom",
+    no_cache: bool = False,
 ) -> AuditRun:
     """Audit a batch of games for one username. Builds AccountProfile.
 
@@ -160,6 +208,7 @@ def run_username_batch(
                     design_system_version=design_system_version,
                     opening_book_sha256=opening_book_sha256,
                     book_path=book_path,
+                    no_cache=no_cache,
                 )
                 for game in games
             ]
@@ -174,6 +223,7 @@ def run_username_batch(
                 design_system_version=design_system_version,
                 opening_book_sha256=opening_book_sha256,
                 book_path=book_path,
+                no_cache=no_cache,
             )
             for game in games
         ]

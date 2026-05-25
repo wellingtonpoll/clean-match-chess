@@ -70,6 +70,7 @@ def audit_game(
         engine_path=engine_path,
         engine_image=engine_image,
         book_path=book,
+        no_cache=no_cache,
     )
     raise typer.Exit(code=code.value)
 
@@ -115,6 +116,7 @@ def audit_username(
         engine_path=engine_path,
         engine_image=engine_image,
         book_path=book,
+        no_cache=no_cache,
     )
     raise typer.Exit(code=code.value)
 

@@ -26,8 +26,13 @@ def execute(
     engine_path: str | None = None,
     engine_image: str | None = None,
     book_path: str | None = None,
+    no_cache: bool = False,
 ) -> ExitCode:
-    """Run the single-game audit. Returns the exit code."""
+    """Run the single-game audit. Returns the exit code.
+
+    ``no_cache`` (feature 008): when True, bypasses both the Postgres
+    cache lookup and the persist step.
+    """
     try:
         game = _load_game(input_arg)
     except PgnValidationError as exc:
@@ -50,6 +55,7 @@ def execute(
         engine_path=engine_path or None,
         engine_image=engine_image or None,
         book_path=book_path,
+        no_cache=no_cache,
     )
 
     fmt = OutputFormat(output)

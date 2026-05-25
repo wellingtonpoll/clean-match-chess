@@ -27,6 +27,7 @@ def execute(
     engine_path: str | None = None,
     engine_image: str | None = None,
     book_path: str | None = None,
+    no_cache: bool = False,
 ) -> ExitCode:
     if platform != "chesscom":
         sys.stderr.write(f"error: --platform {platform!r} not supported in MVP; use 'chesscom'.\n")
@@ -69,6 +70,7 @@ def execute(
         engine_image=engine_image or None,
         book_path=book_path,
         platform=platform,
+        no_cache=no_cache,
     )
 
     fmt = OutputFormat(output)
