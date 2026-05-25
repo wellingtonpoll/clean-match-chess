@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { AnalysisProvider } from '../lib/AnalysisContext'
 
 export const metadata: Metadata = {
   title: 'CleanMatch — Chess Fairplay Auditor',
@@ -13,7 +14,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <body>
+        <AnalysisProvider>{children}</AnalysisProvider>
+      </body>
     </html>
   )
 }

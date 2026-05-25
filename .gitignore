@@ -38,3 +38,12 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Frontend Node + Next.js
+apps/frontend/node_modules/
+apps/frontend/.next/
+apps/frontend/tsconfig.tsbuildinfo
+
+# Frontend Playwright (feature 006)
+apps/frontend/playwright-report/
+apps/frontend/test-results/

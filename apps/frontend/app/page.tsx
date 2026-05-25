@@ -1,34 +1,9 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
-import { GameRow, GameResult, RiskLevel } from '../components/GameRow'
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface Session {
-  id: string
-  offset: number
-  games: GameResult[]
-  done: boolean
-  error?: string
-}
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const GAMES_PER_PAGE = 10
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function buildInitialGames(offset: number, count: number): GameResult[] {
-  return Array.from({ length: count }, (_, i) => ({
-    idx: offset + i,
-    status: 'pending' as const,
-  }))
-}
-
-function generateId(): string {
-  return Math.random().toString(36).slice(2, 10)
-}
+import { GameRow } from '../components/GameRow'
+import { Header } from '../components/Header'
+import type { Session } from '../lib/AnalysisContext'
+import { useAnalysisContext } from '../lib/AnalysisContext'
 
 // ─── Horse Labs Lockup ────────────────────────────────────────────────────────
 
@@ -64,226 +39,17 @@ function HorseLabsLockup() {
   )
 }
 
-// ─── Platform toggle ──────────────────────────────────────────────────────────
-
-function PlatformToggle({
-  value,
-  onChange,
-}: {
-  value: 'chesscom' | 'lichess'
-  onChange: (v: 'chesscom' | 'lichess') => void
-}) {
-  const options: { key: 'chesscom' | 'lichess'; label: string }[] = [
-    { key: 'chesscom', label: 'Chess.com' },
-    { key: 'lichess', label: 'Lichess' },
-  ]
-
-  return (
-    <div
-      style={{
-        display: 'inline-flex',
-        border: '1px solid rgba(242,239,232,0.14)',
-        overflow: 'hidden',
-      }}
-    >
-      {options.map((opt) => {
-        const active = value === opt.key
-        return (
-          <button
-            key={opt.key}
-            onClick={() => onChange(opt.key)}
-            style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '10px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.14em',
-              padding: '8px 16px',
-              background: active ? '#B81820' : 'transparent',
-              color: active ? '#F2EFE8' : '#7A7A80',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'background 0.15s, color 0.15s',
-              borderRight: opt.key === 'chesscom' ? '1px solid rgba(242,239,232,0.14)' : 'none',
-            }}
-          >
-            {opt.label}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const [username, setUsername] = useState('')
-  const [platform, setPlatform] = useState<'chesscom' | 'lichess'>('chesscom')
-  const [sessions, setSessions] = useState<Session[]>([])
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const abortRef = useRef<AbortController | null>(null)
-
-  // Current username used for analysis (locked once started)
-  const [activeUsername, setActiveUsername] = useState('')
+  const {
+    sessions,
+    isAnalyzing,
+    activeUsername,
+    runAnalysis,
+  } = useAnalysisContext()
 
   const totalOffset = sessions.reduce((acc, s) => acc + s.games.length, 0)
-
-  const runAnalysis = useCallback(
-    async (offset: number) => {
-      if (!username.trim()) return
-
-      // Abort any previous stream
-      abortRef.current?.abort()
-      const abort = new AbortController()
-      abortRef.current = abort
-
-      setIsAnalyzing(true)
-      if (offset === 0) {
-        setActiveUsername(username.trim())
-        setSessions([])
-      }
-
-      const sessionId = generateId()
-      const initialGames = buildInitialGames(offset, GAMES_PER_PAGE)
-
-      setSessions((prev) =>
-        offset === 0
-          ? [{ id: sessionId, offset, games: initialGames, done: false }]
-          : [...prev, { id: sessionId, offset, games: initialGames, done: false }]
-      )
-
-      const params = new URLSearchParams({
-        username: username.trim(),
-        platform,
-        count: String(GAMES_PER_PAGE),
-        offset: String(offset),
-      })
-
-      try {
-        const res = await fetch(`/api/analyze?${params}`, {
-          signal: abort.signal,
-        })
-
-        if (!res.ok) {
-          const errText = await res.text()
-          setSessions((prev) =>
-            prev.map((s) =>
-              s.id === sessionId ? { ...s, done: true, error: errText } : s
-            )
-          )
-          return
-        }
-
-        const reader = res.body?.getReader()
-        if (!reader) return
-
-        const decoder = new TextDecoder()
-        let partial = ''
-
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-
-          partial += decoder.decode(value, { stream: true })
-          const lines = partial.split('\n')
-          partial = lines.pop() || ''
-
-          for (const line of lines) {
-            const trimmed = line.trim()
-            if (!trimmed.startsWith('data:')) continue
-
-            const jsonStr = trimmed.slice(5).trim()
-            if (!jsonStr) continue
-
-            let payload: Record<string, unknown>
-            try {
-              payload = JSON.parse(jsonStr)
-            } catch {
-              continue
-            }
-
-            // Stream done sentinel
-            if (payload.done) {
-              setSessions((prev) =>
-                prev.map((s) => (s.id === sessionId ? { ...s, done: true } : s))
-              )
-              break
-            }
-
-            // Global error
-            if (payload.error && payload.idx === undefined) {
-              setSessions((prev) =>
-                prev.map((s) =>
-                  s.id === sessionId
-                    ? {
-                        ...s,
-                        done: true,
-                        error: String(payload.error),
-                        games: s.games.map((g) => ({
-                          ...g,
-                          status: 'error' as const,
-                          error: String(payload.error),
-                        })),
-                      }
-                    : s
-                )
-              )
-              break
-            }
-
-            // Game result
-            const idx = payload.idx as number
-            const updatedGame: GameResult =
-              payload.error
-                ? {
-                    idx,
-                    status: 'error',
-                    error: String(payload.error),
-                    headers: payload.headers as Record<string, string> | undefined,
-                  }
-                : {
-                    idx,
-                    status: 'done',
-                    runId: payload.run_id as string | undefined,
-                    score: payload.score as number | undefined,
-                    riskLevel: payload.risk_level as RiskLevel | undefined,
-                    confidenceInterval: payload.confidence_interval as [number, number] | undefined,
-                    dominantSignals: payload.dominant_signals as string[] | undefined,
-                    headers: payload.headers as Record<string, string> | undefined,
-                    plyCount: payload.ply_count as number | undefined,
-                  }
-
-            setSessions((prev) =>
-              prev.map((s) => {
-                if (s.id !== sessionId) return s
-                const games = s.games.map((g) =>
-                  g.idx === idx ? updatedGame : g
-                )
-                return { ...s, games }
-              })
-            )
-          }
-        }
-      } catch (e) {
-        if ((e as Error).name === 'AbortError') return
-        setSessions((prev) =>
-          prev.map((s) =>
-            s.id === sessionId
-              ? { ...s, done: true, error: (e as Error).message }
-              : s
-          )
-        )
-      } finally {
-        setIsAnalyzing(false)
-      }
-    },
-    [username, platform]
-  )
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    runAnalysis(0)
-  }
 
   const handleLoadMore = () => {
     runAnalysis(totalOffset)
@@ -300,111 +66,43 @@ export default function HomePage() {
         color: '#F2EFE8',
       }}
     >
-      {/* ── Main content ── */}
+      <Header />
       <main
         style={{
           maxWidth: '64rem',
           margin: '0 auto',
           padding: '0 24px 80px',
+          paddingTop: 'var(--header-h, 64px)',
         }}
       >
-        {/* ── Hero / Search section ── */}
-        <section
-          style={{
-            paddingTop: sessions.length > 0 ? '40px' : '80px',
-            paddingBottom: '48px',
-            transition: 'padding-top 0.3s ease',
-          }}
-        >
-          {sessions.length === 0 && (
-            <div style={{ marginBottom: '48px' }}>
-              <HorseLabsLockup />
-              <p
-                style={{
-                  fontFamily: 'Space Grotesk, sans-serif',
-                  fontSize: '15px',
-                  color: '#4A4A50',
-                  maxWidth: '480px',
-                  lineHeight: 1.6,
-                  marginTop: '32px',
-                }}
-              >
-                Análise probabilística de fairplay em partidas de xadrez via
-                Stockfish e heurísticas estatísticas avançadas.
-              </p>
-            </div>
-          )}
-
-          {/* Search form */}
-          <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: '16px' }}>
-              <PlatformToggle value={platform} onChange={setPlatform} />
-            </div>
-
-            <div
+        {sessions.length === 0 && (
+          <section
+            data-testid="hero"
+            style={{
+              paddingTop: '64px',
+              paddingBottom: '48px',
+            }}
+          >
+            <HorseLabsLockup />
+            <p
               style={{
-                display: 'flex',
-                gap: '0',
-                border: '1px solid rgba(242,239,232,0.14)',
-                overflow: 'hidden',
+                fontFamily: 'Space Grotesk, sans-serif',
+                fontSize: '15px',
+                color: '#4A4A50',
+                maxWidth: '480px',
+                lineHeight: 1.6,
+                marginTop: '32px',
               }}
             >
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Nome de usuário..."
-                disabled={isAnalyzing}
-                style={{
-                  flex: 1,
-                  padding: '16px 20px',
-                  fontFamily: 'Instrument Serif, Georgia, serif',
-                  fontSize: '22px',
-                  fontStyle: username ? 'normal' : 'italic',
-                  fontWeight: 400,
-                  color: '#F2EFE8',
-                  background: '#131316',
-                  border: 'none',
-                  outline: 'none',
-                  opacity: isAnalyzing ? 0.6 : 1,
-                }}
-              />
-              <button
-                type="submit"
-                disabled={isAnalyzing || !username.trim()}
-                style={{
-                  fontFamily: 'JetBrains Mono, monospace',
-                  fontSize: '11px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.14em',
-                  padding: '0 28px',
-                  background: isAnalyzing ? '#4A4A50' : '#8B0F14',
-                  color: '#F2EFE8',
-                  border: 'none',
-                  cursor: isAnalyzing || !username.trim() ? 'not-allowed' : 'pointer',
-                  transition: 'background 0.15s',
-                  minWidth: '120px',
-                  flexShrink: 0,
-                }}
-                onMouseEnter={(e) => {
-                  if (!isAnalyzing && username.trim())
-                    (e.currentTarget as HTMLButtonElement).style.background = '#B81820'
-                }}
-                onMouseLeave={(e) => {
-                  if (!isAnalyzing)
-                    (e.currentTarget as HTMLButtonElement).style.background = '#8B0F14'
-                }}
-              >
-                {isAnalyzing ? 'Analisando...' : 'Analisar'}
-              </button>
-            </div>
-          </form>
-        </section>
+              Análise probabilística de fairplay em partidas de xadrez via
+              Stockfish e heurísticas estatísticas avançadas. Digite o nome de
+              um jogador no campo acima para iniciar.
+            </p>
+          </section>
+        )}
 
-        {/* ── Results section ── */}
         {showResults && (
-          <section>
-            {/* Eyebrow */}
+          <section style={{ paddingTop: '32px' }}>
             <div
               style={{
                 display: 'flex',
@@ -440,11 +138,9 @@ export default function HomePage() {
                 </h2>
               </div>
 
-              {/* Summary stats */}
               <SummaryStats sessions={sessions} />
             </div>
 
-            {/* Game rows */}
             <div
               style={{
                 border: '1px solid rgba(242,239,232,0.14)',
@@ -457,7 +153,6 @@ export default function HomePage() {
               )}
             </div>
 
-            {/* Load more */}
             {lastSession?.done && !isAnalyzing && (
               <div
                 style={{
@@ -496,7 +191,6 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* Error state */}
             {lastSession?.error && (
               <div
                 style={{

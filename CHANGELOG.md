@@ -9,6 +9,33 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — Feature 006 (Frontend UX Improvements)
+
+- **Clickable player links** (US1): player usernames in game cards render as
+  semantic `<button>` elements. Clicking an opponent's name aborts any
+  in-flight analysis and triggers a new analysis for that player on the
+  current platform; clicking the current subject is a no-op.
+- **Expandable analysis cards** (US2): cards in `done` state expand on click
+  to reveal an "Análise detalhada" section with pt-BR explanations for each
+  `dominant_signal`. Dictionary covers 11 known signals plus a generic
+  fallback for new signals introduced backend-side.
+  Lives at `apps/frontend/lib/signalExplanations.ts`. Jargon blacklist
+  (z-score, bootstrap, CUSUM, p-value, etc.) enforced via test.
+- **Sticky header** (US3): brand mark + search field + platform toggle pinned
+  to the top of the viewport. Clicking the HorseLabs brand resets the
+  current analysis and restores the hero section. Mobile (<480px) stacks
+  the brand above the search row.
+- **Cross-viewport Playwright suite** (US4): 4 viewports
+  (375×667, 414×896, 1280×800, 1920×1080); 6 bug-class detectors (overflow,
+  hidden controls, truncation, hover-on-touch, scroll lock, expand-layout-shift);
+  90 tests pass in ~35 s wall time (warm). CI job `frontend_e2e` path-filtered
+  to `apps/frontend/**`.
+- `AnalysisProvider` context (`apps/frontend/lib/AnalysisContext.tsx`) lifts
+  `runAnalysis` + session state out of the page so the new Header and
+  PlayerLink components share the same actions.
+- ESLint flat config (`apps/frontend/eslint.config.mjs`) for lint parity with
+  the backend `ruff` gate (Principle I — infra cleanup, not user-visible).
+
 ### Added — Feature 005 (Scoring v2 Phase 2)
 
 - **Real Polyglot opening book** at `packages/analysis-core/data/opening_book.bin`
