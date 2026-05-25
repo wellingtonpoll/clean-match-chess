@@ -1,0 +1,2 @@
+data: {"idx": 0, "status": "done", "score": 0.92, "risk_level": "high", "confidence_interval": [0.88, 0.96], "dominant_signals": ["acpl-analysis", "engine-correlation/top1", "regime-shift"], "headers": {"White": "alice123", "Black": "bob456", "Date": "2026-04-20", "TimeControl": "600+0", "Result": "1-0"}, "ply_count": 42, "run_id": "run-suspect-1"}
+data: {"done": true}

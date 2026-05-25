@@ -1,7 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import { ProgressBar } from './ProgressBar'
 import { ExportButton } from './ExportButton'
+import { PlayerLink } from './PlayerLink'
+import { ExpandedAnalysis } from './ExpandedAnalysis'
 
 export type RiskLevel = 'low' | 'medium' | 'high'
 
@@ -91,12 +94,16 @@ function ScoreBar({ score }: { score: number }) {
   )
 }
 
-function parseResult(headers?: Record<string, string>): string {
-  if (!headers) return '?'
-  const white = headers['White'] || ''
-  const black = headers['Black'] || ''
-  const result = headers['Result'] || '*'
-  return `${white} vs ${black} — ${result}`
+function parsePlayers(headers?: Record<string, string>): {
+  white: string
+  black: string
+  result: string
+} {
+  return {
+    white: headers?.['White'] || '?',
+    black: headers?.['Black'] || '?',
+    result: headers?.['Result'] || '*',
+  }
 }
 
 function parseDate(headers?: Record<string, string>): string {
@@ -112,8 +119,10 @@ function parseTimeControl(headers?: Record<string, string>): string {
 }
 
 export function GameRow({ game }: GameRowProps) {
+  const [expanded, setExpanded] = useState(false)
   const isSuspect = game.score !== undefined && game.score > 0.75
   const isWarning = game.score !== undefined && game.score >= 0.5 && game.score <= 0.75
+  const canExpand = game.status === 'done'
 
   const rowStyle: React.CSSProperties = {
     borderBottom: '1px solid rgba(242,239,232,0.08)',
@@ -196,14 +205,29 @@ export function GameRow({ game }: GameRowProps) {
   }
 
   // Done state
+  const expandedId = game.runId ? `expanded-${game.runId}` : `expanded-${game.idx}`
   return (
-    <div style={rowStyle}>
+    <div style={rowStyle} data-testid="game-row" data-expanded={expanded ? 'true' : 'false'}>
       <div
+        data-testid="game-row__toggle"
+        role={canExpand ? 'button' : undefined}
+        aria-expanded={canExpand ? expanded : undefined}
+        aria-controls={canExpand ? expandedId : undefined}
+        tabIndex={canExpand ? 0 : undefined}
+        onClick={() => canExpand && setExpanded((v) => !v)}
+        onKeyDown={(e) => {
+          if (!canExpand) return
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setExpanded((v) => !v)
+          }
+        }}
         style={{
           display: 'flex',
           alignItems: 'flex-start',
           gap: '12px',
           flexWrap: 'wrap',
+          cursor: canExpand ? 'pointer' : 'default',
         }}
       >
         {/* Index */}
@@ -230,7 +254,18 @@ export function GameRow({ game }: GameRowProps) {
               fontFamily: 'Space Grotesk, sans-serif',
             }}
           >
-            {parseResult(game.headers)}
+            {(() => {
+              const { white, black, result } = parsePlayers(game.headers)
+              return (
+                <>
+                  <PlayerLink username={white} />
+                  <span style={{ color: '#4A4A50', margin: '0 6px' }}>vs</span>
+                  <PlayerLink username={black} />
+                  <span style={{ color: '#4A4A50', margin: '0 8px' }}>—</span>
+                  <span>{result}</span>
+                </>
+              )
+            })()}
           </div>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             {parseDate(game.headers) && (
@@ -302,6 +337,13 @@ export function GameRow({ game }: GameRowProps) {
           )}
         </div>
       </div>
+
+      {/* Expanded "Análise detalhada" section (US2) */}
+      {canExpand && expanded && (
+        <div id={expandedId}>
+          <ExpandedAnalysis game={game} />
+        </div>
+      )}
     </div>
   )
 }

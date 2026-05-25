@@ -145,3 +145,35 @@ input, select, textarea {
 .animate-score-fill {
   animation: score-fill 0.8s ease-out forwards;
 }
+
+/* Feature 006 / T023 — Sticky header height as a CSS custom property so
+   <main> can offset its top padding to match the header. Desktop and mobile
+   stacking values diverge at the 480px breakpoint per FR-011. */
+
+:root {
+  --header-h: 64px;
+}
+
+@media (max-width: 479px) {
+  :root {
+    --header-h: 112px;
+  }
+}
+
+/* Feature 006 / T021 — Mobile stacking for Header: brand row, search row.
+   Per Clarifications 2026-05-24: vertical stacking < 480px width. */
+
+@media (max-width: 479px) {
+  .header__row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 8px 0;
+    gap: 8px !important;
+  }
+  .header__row > div:first-child {
+    align-self: flex-start;
+  }
+  .header__row form {
+    justify-content: flex-start !important;
+  }
+}

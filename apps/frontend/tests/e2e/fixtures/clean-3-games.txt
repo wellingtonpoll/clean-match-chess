@@ -1,0 +1,4 @@
+data: {"idx": 0, "status": "done", "score": 0.05, "risk_level": "low", "confidence_interval": [0.02, 0.10], "dominant_signals": [], "headers": {"White": "alice123", "Black": "frank333", "Date": "2026-04-01", "TimeControl": "600+0", "Result": "1-0"}, "ply_count": 80, "run_id": "run-clean-1"}
+data: {"idx": 1, "status": "done", "score": 0.18, "risk_level": "low", "confidence_interval": [0.12, 0.24], "dominant_signals": [], "headers": {"White": "george444", "Black": "alice123", "Date": "2026-04-02", "TimeControl": "300+5", "Result": "0-1"}, "ply_count": 65, "run_id": "run-clean-2"}
+data: {"idx": 2, "status": "done", "score": 0.22, "risk_level": "low", "confidence_interval": [0.17, 0.27], "dominant_signals": ["complexity"], "headers": {"White": "alice123", "Black": "harry555", "Date": "2026-04-03", "TimeControl": "180+2", "Result": "1/2-1/2"}, "ply_count": 95, "run_id": "run-clean-3"}
+data: {"done": true}

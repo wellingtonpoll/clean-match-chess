@@ -140,10 +140,12 @@ Overall average: **60-90% token reduction** on common development operations.
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at `specs/005-scoring-v2-phase2/plan.md`. Cross-feature dependency on
-`specs/004-scoring-v2-phase1/plan.md` (defines the scoring pipeline this
-phase validates + provisions production artifacts for),
-`specs/003-repo-health-hardening/plan.md` (CI / quality gates the new
-FPR-gate job extends), and `specs/002-design-system/plan.md` (report-engine
-consumer of the manifest provenance fields exposed by US4).
+at `specs/006-frontend-ux-improvements/plan.md`. Cross-feature dependency on
+`specs/002-design-system/plan.md` (consuming design tokens / brand vocabulary
+for the Header lockup), `specs/003-repo-health-hardening/plan.md` (CI quality
+gates the new `frontend_e2e` job extends), and `specs/005-scoring-v2-phase2/plan.md`
+(audit JSON envelope shape that `dominant_signals` is consumed from in the
+expandable cards). Backend specs 001/004/005 produce the data the frontend
+displays — this feature is the first concrete UI delivery into the Phase 3
+web surface referenced in 001/002 plan.md.
 <!-- SPECKIT END -->
