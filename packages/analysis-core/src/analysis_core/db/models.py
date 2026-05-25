@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import (
     DateTime,
@@ -39,9 +40,7 @@ class AuditRunModel(Base):
 
     __tablename__ = "audit_runs"
     __table_args__ = (
-        UniqueConstraint(
-            "pgn_sha256", "manifest_sha256", name="audit_runs_pgn_manifest_unique"
-        ),
+        UniqueConstraint("pgn_sha256", "manifest_sha256", name="audit_runs_pgn_manifest_unique"),
         Index("idx_audit_runs_platform_game", "platform", "game_id"),
         Index("idx_audit_runs_white", "white_username"),
         Index("idx_audit_runs_black", "black_username"),
@@ -66,8 +65,8 @@ class AuditRunModel(Base):
     risk_level: Mapped[str | None] = mapped_column(String(8), nullable=True)
     ply_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    run_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    manifest_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    run_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    manifest_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

@@ -50,9 +50,7 @@ def upgrade() -> None:
         # Reserved for feature 009+ (auth + multi-tenancy). No FK constraints.
         sa.Column("user_id", UUID(as_uuid=True), nullable=True),
         sa.Column("tenant_id", UUID(as_uuid=True), nullable=True),
-        sa.UniqueConstraint(
-            "pgn_sha256", "manifest_sha256", name="audit_runs_pgn_manifest_unique"
-        ),
+        sa.UniqueConstraint("pgn_sha256", "manifest_sha256", name="audit_runs_pgn_manifest_unique"),
     )
 
     op.create_index(

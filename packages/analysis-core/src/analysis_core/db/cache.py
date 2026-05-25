@@ -28,6 +28,14 @@ from analysis_core.manifest import manifest_hash
 logger = structlog.get_logger(__name__)
 
 
+def _risk_level_str(audit_run: AuditRun) -> str | None:
+    """Return the string form of the audit's risk level (handles enum + str)."""
+    if audit_run.score is None or audit_run.score.risk_level is None:
+        return None
+    rl = audit_run.score.risk_level
+    return rl.value if hasattr(rl, "value") else str(rl)
+
+
 def _headers(game: Game | None) -> dict[str, Any]:
     """Pull queryable columns out of a Game for indexing.
 
@@ -108,9 +116,7 @@ def persist(
         return
 
     if not audit_run.manifest or not audit_run.manifest.input_pgn_sha256:
-        logger.debug(
-            "db.cache.persist_skipped", reason="manifest.input_pgn_sha256 missing"
-        )
+        logger.debug("db.cache.persist_skipped", reason="manifest.input_pgn_sha256 missing")
         return
 
     try:
@@ -135,20 +141,13 @@ def persist(
                     game_id=headers["game_id"],
                     white_username=headers["white_username"],
                     black_username=headers["black_username"],
-                    score=getattr(audit_run.score, "score", None),
-                    risk_level=(
-                        getattr(audit_run.score, "risk_level", None).value
-                        if getattr(audit_run.score, "risk_level", None) is not None
-                        and hasattr(audit_run.score.risk_level, "value")
-                        else getattr(audit_run.score, "risk_level", None)
-                    ),
+                    score=audit_run.score.score if audit_run.score is not None else None,
+                    risk_level=_risk_level_str(audit_run),
                     ply_count=headers["ply_count"],
                     run_json=run_json,
                     manifest_json=manifest_json,
                 )
-                .on_conflict_do_nothing(
-                    index_elements=["pgn_sha256", "manifest_sha256"]
-                )
+                .on_conflict_do_nothing(index_elements=["pgn_sha256", "manifest_sha256"])
             )
             session.execute(stmt)
             session.commit()

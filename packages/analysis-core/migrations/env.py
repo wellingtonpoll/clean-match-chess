@@ -13,11 +13,11 @@ import os
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
 
 # Import the declarative Base + register the AuditRunModel so
 # autogenerate sees the metadata.
 from analysis_core.db.models import Base
+from sqlalchemy import engine_from_config, pool
 
 config = context.config
 

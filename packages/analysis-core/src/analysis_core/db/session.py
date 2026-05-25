@@ -1,13 +1,18 @@
-"""Async SQLAlchemy engine + session factory for the analysis cache.
+"""SQLAlchemy engine + session factory for the analysis cache.
 
 Feature 008. The engine is a process-global singleton initialised lazily
-via `init_engine()`. Calls to `get_session_factory()` return `None` when
-no `DATABASE_URL` is set or initial connection failed — callers (the
-cache layer) treat `None` as the graceful-degradation signal.
+via `init_engine()`. `get_session_factory()` returns `None` when no
+`DATABASE_URL` is set or initial connection failed — callers (the cache
+layer) treat `None` as the graceful-degradation signal.
 
-The connection URL is masked before any log line includes it: the
-password component is redacted via `urllib.parse.urlsplit` so credentials
-never escape into structured logs (Principle III + FR-004).
+Sync (not async) on purpose: the audit pipeline at `pipeline.run` is
+already synchronous; bridging async/sync here would just add layers
+without buying anything (the cache is invoked once at the start and once
+at the end of an audit, not in a streaming hot loop).
+
+Password masking: `_mask_url()` redacts the password component via
+`urllib.parse.urlsplit` so credentials never escape into structured logs
+(Principle III + FR-004).
 """
 
 from __future__ import annotations
@@ -17,22 +22,17 @@ from typing import Final
 from urllib.parse import SplitResult, urlsplit, urlunsplit
 
 import structlog
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import (
-    AsyncEngine,
-    async_sessionmaker,
-    AsyncSession,
-    create_async_engine,
-)
+from sqlalchemy.orm import Session, sessionmaker
 
 logger = structlog.get_logger(__name__)
 
-_DEV_URL: Final[str] = (
-    "postgresql+psycopg://cleanmatch:cleanmatch@localhost:5432/cleanmatch"
-)
+_DEV_URL: Final[str] = "postgresql+psycopg://cleanmatch:cleanmatch@localhost:5432/cleanmatch"
 
-_engine: AsyncEngine | None = None
-_session_factory: async_sessionmaker[AsyncSession] | None = None
+_engine: Engine | None = None
+_session_factory: sessionmaker[Session] | None = None
 _init_attempted: bool = False
 _init_failure_reason: str | None = None
 
@@ -61,13 +61,7 @@ def _mask_url(url: str) -> str:
 
 
 def init_engine(url: str | None = None) -> None:
-    """Initialise the async engine + session factory.
-
-    Idempotent: calling twice is a no-op after the first successful init.
-    On failure (e.g. unparseable URL), logs a structured warning and leaves
-    `_session_factory` set to `None`; subsequent calls retry on each call
-    to `get_session_factory()`.
-    """
+    """Initialise the engine + session factory. Idempotent."""
     global _engine, _session_factory, _init_attempted, _init_failure_reason
 
     if _session_factory is not None:
@@ -81,12 +75,13 @@ def init_engine(url: str | None = None) -> None:
         return
 
     try:
-        engine = create_async_engine(
+        engine = create_engine(
             resolved,
             pool_pre_ping=True,
             pool_size=5,
             max_overflow=2,
             echo=False,
+            future=True,
         )
     except (SQLAlchemyError, ValueError) as e:
         _init_attempted = True
@@ -99,28 +94,24 @@ def init_engine(url: str | None = None) -> None:
         return
 
     _engine = engine
-    _session_factory = async_sessionmaker(
-        engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
-    )
+    _session_factory = sessionmaker(engine, expire_on_commit=False, future=True)
     _init_attempted = True
     _init_failure_reason = None
     logger.debug("db.cache.engine_initialised", url=_mask_url(resolved))
 
 
-def get_session_factory() -> async_sessionmaker[AsyncSession] | None:
+def get_session_factory() -> sessionmaker[Session] | None:
     """Return the session factory, or None if the cache is disabled."""
     if _session_factory is None and not _init_attempted:
         init_engine()
     return _session_factory
 
 
-async def close_engine() -> None:
+def close_engine() -> None:
     """Dispose of the engine. For test teardown + clean shutdown."""
     global _engine, _session_factory, _init_attempted, _init_failure_reason
     if _engine is not None:
-        await _engine.dispose()
+        _engine.dispose()
     _engine = None
     _session_factory = None
     _init_attempted = False

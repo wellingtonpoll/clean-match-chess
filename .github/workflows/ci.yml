@@ -16,6 +16,25 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+    # Feature 008 — Postgres analysis cache. Cache gracefully degrades
+    # when the DB is unreachable, so the integration suite skips on
+    # DATABASE_URL absence rather than hard-failing.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: cleanmatch
+          POSTGRES_PASSWORD: cleanmatch
+          POSTGRES_DB: cleanmatch
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cleanmatch"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+psycopg://cleanmatch:cleanmatch@localhost:5432/cleanmatch
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
@@ -29,6 +48,9 @@ jobs:
 
       - name: Sync workspace
         run: uv sync --all-packages --all-extras
+
+      - name: Apply database migrations
+        run: uv run alembic -c packages/analysis-core/alembic.ini upgrade head
 
       - name: Lint (ruff check)
         run: uv run ruff check .
