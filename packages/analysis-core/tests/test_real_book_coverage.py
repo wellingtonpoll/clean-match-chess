@@ -1,7 +1,11 @@
 """Real opening_book.bin coverage test (feature 005 T013 / SC-002).
 
-Skips gracefully if the bundled file is still the Phase 1 stub (< 100 KB) so
-branches that have not yet landed the real book do not fail.
+Feature 005 shipped the real Lichess-broadcast-derived book (6.5 MB at
+`packages/analysis-core/data/opening_book.bin`, sha256 `dd0c9b50...`), so
+on `main` these tests run. The `_book_is_stub()` guard remains so a
+forgotten swap or a Git LFS pointer accidentally committed in its place
+still skips cleanly (rather than failing with a misleading byte-count
+assertion).
 """
 
 from __future__ import annotations
@@ -27,7 +31,11 @@ def _book_is_stub() -> bool:
     return BOOK_PATH.stat().st_size <= _STUB_SIZE_CEILING
 
 
-@pytest.mark.skipif(_book_is_stub(), reason="feature 005 US2 not yet landed — book is Phase 1 stub")
+@pytest.mark.skipif(
+    _book_is_stub(),
+    reason="opening_book.bin is the Phase 1 synthetic stub (< 100 KB); "
+    "test requires the real Lichess-broadcast-derived book shipped in feature 005",
+)
 def test_real_book_size_at_least_1mb() -> None:
     """FR-002 / SC-002: shipped book must be >= 1 MB."""
     assert BOOK_PATH.stat().st_size >= 1024 * 1024, (
@@ -35,7 +43,11 @@ def test_real_book_size_at_least_1mb() -> None:
     )
 
 
-@pytest.mark.skipif(_book_is_stub(), reason="feature 005 US2 not yet landed — book is Phase 1 stub")
+@pytest.mark.skipif(
+    _book_is_stub(),
+    reason="opening_book.bin is the Phase 1 synthetic stub (< 100 KB); "
+    "test requires the real Lichess-broadcast-derived book shipped in feature 005",
+)
 def test_book_covers_italian_game_first_12_plies() -> None:
     """Italian Game mainline is the canonical SC-002 acceptance: >= 12 of first
     16 plies must be flagged as book."""
@@ -60,7 +72,11 @@ def test_book_covers_italian_game_first_12_plies() -> None:
     )
 
 
-@pytest.mark.skipif(_book_is_stub(), reason="feature 005 US2 not yet landed — book is Phase 1 stub")
+@pytest.mark.skipif(
+    _book_is_stub(),
+    reason="opening_book.bin is the Phase 1 synthetic stub (< 100 KB); "
+    "test requires the real Lichess-broadcast-derived book shipped in feature 005",
+)
 def test_book_covers_smoke_fixture_first_six_plies() -> None:
     """The canonical smoke fixture (King's Gambit Accepted line) is rare in
     modern play, so an OTB-broadcast-derived book naturally goes off-book
@@ -85,7 +101,11 @@ def test_book_covers_smoke_fixture_first_six_plies() -> None:
     )
 
 
-@pytest.mark.skipif(_book_is_stub(), reason="feature 005 US2 not yet landed — book is Phase 1 stub")
+@pytest.mark.skipif(
+    _book_is_stub(),
+    reason="opening_book.bin is the Phase 1 synthetic stub (< 100 KB); "
+    "test requires the real Lichess-broadcast-derived book shipped in feature 005",
+)
 def test_book_starting_position_has_diverse_first_moves() -> None:
     """Real master-game-derived books expose several first moves with non-zero
     weight; the Phase 1 stub had only the 8 mainline pre-coded openings."""

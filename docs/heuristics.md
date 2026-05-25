@@ -43,18 +43,32 @@ detect drift by diffing manifests across runs.
 - **MINOR**: new tunable, new sub-signal, expanded output.
 - **PATCH**: bug fix, rationale-string refinement, perf improvement.
 
-## Known limitations (current MVP)
+## Known limitations (v2.0.0)
 
-- All signals currently run against `StaticAnalyzer` (deterministic,
-  no Stockfish call). Numbers are reproducible but not yet
-  semantically meaningful for cheat detection. The real
-  `StockfishAnalyzer` wiring is a follow-up task.
 - `Move.signal_contributions` is empty in the persisted run output;
   per-move attribution requires a second-pass injection in
   `pipeline/run.py`. Tracked.
-- `OpeningBook` reads a bundled Lichess Masters Polyglot file; the
-  `.bin` is not yet bundled, so all plies are currently treated as
-  non-book.
+- Rating-baseline calibration ships with literature-derived values
+  (`packages/heuristics/data/rating_baselines.json`, `source_dataset =
+  "hand-curated-stub"`, `sample_size = 100` per bucket). Feature 007
+  replaces this with measured population stats from a Lichess monthly
+  export (≥ 1000 games sampled per bucket via reservoir sampling at
+  Stockfish-16 depth 12). Once 007 lands, `acpl-analysis` and
+  `engine-correlation/weighted` will judge against measured human
+  populations rather than estimates.
+- Labeled-corpus FPR/TPR not yet measured. Feature 005 shipped the
+  gate harness (`tests/fpr_gate/`) and 50 clean fixtures; feature 007
+  sources ≥ 20 engine-assisted fixtures and runs the cold-cache gate.
+
+## Resolved (past limitations)
+
+- `OpeningBook` bundling — addressed in feature 004 (initial `gm2600.bin`
+  stub) and re-shipped in feature 005 as a 6.5 MB Lichess-broadcast-derived
+  book at `packages/analysis-core/data/opening_book.bin`. Plies in the
+  book are now correctly flagged.
+- `StaticAnalyzer`-only — feature 004 wired real `EngineAnalyzer`
+  (Stockfish via `python-chess` UCI) at `packages/analysis-core/src/analysis_core/engine/analysis.py`.
+  `StaticAnalyzer` is now a test-only fallback.
 
 ## Reproducibility
 
