@@ -2,8 +2,14 @@
 
 // Feature 006 / T017 — Renders the layperson "Análise detalhada" section
 // inside an expanded GameRow.
+//
+// 2026-05-25 follow-up (Issue: "explicação detalhada de como a plataforma
+// chegou nesse resultado"): adds a per-game reasoning summary at the top
+// of the section so the reader sees a narrative explanation of the score
+// (numeric value + risk class + confidence-interval width + signal framing)
+// before the individual signal cards.
 
-import { explainSignal } from '../lib/signalExplanations'
+import { explainSignal, summarizeGame } from '../lib/signalExplanations'
 import type { GameResult } from './GameRow'
 
 interface ExpandedAnalysisProps {
@@ -12,6 +18,12 @@ interface ExpandedAnalysisProps {
 
 export function ExpandedAnalysis({ game }: ExpandedAnalysisProps) {
   const signals = game.dominantSignals ?? []
+  const summary = summarizeGame({
+    score: game.score,
+    riskLevel: game.riskLevel,
+    confidenceInterval: game.confidenceInterval,
+    dominantSignals: signals,
+  })
 
   return (
     <div
@@ -34,6 +46,52 @@ export function ExpandedAnalysis({ game }: ExpandedAnalysisProps) {
       >
         Análise detalhada
       </div>
+
+      <section
+        data-testid="score-summary"
+        style={{
+          marginBottom: '16px',
+          paddingBottom: '12px',
+          borderBottom: '1px solid rgba(242,239,232,0.06)',
+        }}
+      >
+        <div
+          data-testid="score-summary__headline"
+          style={{
+            fontFamily: 'Instrument Serif, Georgia, serif',
+            fontSize: '17px',
+            color: '#F2EFE8',
+            marginBottom: '6px',
+          }}
+        >
+          {summary.headline}
+        </div>
+        <p
+          data-testid="score-summary__intro"
+          style={{
+            fontSize: '12px',
+            color: '#A0A0A8',
+            fontFamily: 'Space Grotesk, sans-serif',
+            lineHeight: 1.6,
+            margin: 0,
+            marginBottom: '8px',
+          }}
+        >
+          {summary.intro}
+        </p>
+        <p
+          data-testid="score-summary__signals-lead-in"
+          style={{
+            fontSize: '12px',
+            color: '#7A7A80',
+            fontFamily: 'Space Grotesk, sans-serif',
+            lineHeight: 1.55,
+            margin: 0,
+          }}
+        >
+          {summary.signalsLeadIn}
+        </p>
+      </section>
 
       {signals.length === 0 ? (
         <p

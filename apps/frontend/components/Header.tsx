@@ -7,6 +7,7 @@
 //  - Mobile (< 480px): stacking via CSS — brand row 1, search row 2, total height var(--header-h).
 // Brand click resets analysis state (Clarifications 2026-05-24).
 
+import { useEffect, useRef } from 'react'
 import { useAnalysisContext, type Platform } from '../lib/AnalysisContext'
 
 function BrandMark({ onClick }: { onClick: () => void }) {
@@ -111,8 +112,39 @@ export function Header() {
     reset,
   } = useAnalysisContext()
 
+  // Publish the rendered header height to `--header-h` so the <main> top
+  // padding and the sticky hero's `top` offset both track the actual
+  // pixel height (the static CSS fallback in globals.css under-estimates
+  // mobile stacking by ~25px once font metrics + form-wrap are included).
+  //
+  // Only re-publishes on real window resize and only when the measured
+  // height changes — a ResizeObserver here would loop because writing the
+  // CSS var triggers an extra layout pass on every paint frame.
+  const headerRef = useRef<HTMLElement>(null)
+  const lastPublishedRef = useRef<number | null>(null)
+  useEffect(() => {
+    const el = headerRef.current
+    if (!el) return
+    const publish = () => {
+      const h = el.offsetHeight
+      if (lastPublishedRef.current === h) return
+      lastPublishedRef.current = h
+      document.documentElement.style.setProperty('--header-h', `${h}px`)
+    }
+    // Two-pass first measurement: once synchronously, once after fonts /
+    // layout settle, so we capture the final stacking height.
+    publish()
+    const raf = requestAnimationFrame(publish)
+    window.addEventListener('resize', publish)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('resize', publish)
+    }
+  }, [])
+
   return (
     <header
+      ref={headerRef}
       data-testid="header"
       style={{
         position: 'fixed',

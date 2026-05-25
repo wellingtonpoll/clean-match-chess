@@ -53,6 +53,21 @@ test.describe('US2 — expandable cards', () => {
     await expect(page.getByTestId('expanded-analysis')).toHaveCount(2)
   })
 
+  test('expanded card renders per-game reasoning summary', async ({ page }) => {
+    await runAnalysis(page, 'suspect-1-game')
+    await expect(page.getByTestId('game-row__toggle').first()).toBeVisible({ timeout: 8000 })
+
+    await page.getByTestId('game-row__toggle').first().click()
+
+    const summary = page.getByTestId('score-summary')
+    await expect(summary).toBeVisible()
+    await expect(page.getByTestId('score-summary__headline')).not.toBeEmpty()
+    // The suspect-1-game fixture scores 0.92 (HIGH). Intro must quote the
+    // numeric score so the reader sees the actual value being explained.
+    await expect(page.getByTestId('score-summary__intro')).toContainText('92.0%')
+    await expect(page.getByTestId('score-summary__intro')).toContainText('ALTO')
+  })
+
   test('unknown signal falls back gracefully (US2 AS5)', async ({ page }) => {
     // Inject a fixture-like response with an unknown signal name via route override.
     await page.route('**/api/analyze**', async (route) => {

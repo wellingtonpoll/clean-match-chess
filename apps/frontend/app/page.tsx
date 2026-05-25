@@ -2,6 +2,7 @@
 
 import { GameRow } from '../components/GameRow'
 import { Header } from '../components/Header'
+import { ProfileLockup } from '../components/ProfileLockup'
 import type { Session } from '../lib/AnalysisContext'
 import { useAnalysisContext } from '../lib/AnalysisContext'
 
@@ -57,6 +58,7 @@ export default function HomePage() {
 
   const lastSession = sessions[sessions.length - 1]
   const showResults = sessions.length > 0
+  const hasActiveSearch = activeUsername.length > 0
 
   return (
     <div
@@ -75,31 +77,53 @@ export default function HomePage() {
           paddingTop: 'var(--header-h, 64px)',
         }}
       >
-        {sessions.length === 0 && (
-          <section
-            data-testid="hero"
-            style={{
-              paddingTop: '64px',
-              paddingBottom: '48px',
-            }}
-          >
-            <HorseLabsLockup />
-            <p
-              style={{
-                fontFamily: 'Space Grotesk, sans-serif',
-                fontSize: '15px',
-                color: '#4A4A50',
-                maxWidth: '480px',
-                lineHeight: 1.6,
-                marginTop: '32px',
-              }}
-            >
-              Análise probabilística de fairplay em partidas de xadrez via
-              Stockfish e heurísticas estatísticas avançadas. Digite o nome de
-              um jogador no campo acima para iniciar.
-            </p>
-          </section>
-        )}
+        <section
+          data-testid="hero"
+          data-mode={hasActiveSearch ? 'profile' : 'default'}
+          style={
+            hasActiveSearch
+              ? {
+                  // Sticky just below the fixed Header so the searched-user
+                  // profile stays in view while the results list scrolls
+                  // beneath it. zIndex < Header's 50 so the Header always
+                  // wins layering. Solid bg required so scrolling rows
+                  // don't bleed through.
+                  position: 'sticky',
+                  top: 'var(--header-h, 64px)',
+                  zIndex: 40,
+                  background: '#0B0B0D',
+                  borderBottom: '1px solid rgba(242,239,232,0.14)',
+                  paddingTop: '20px',
+                  paddingBottom: '20px',
+                }
+              : {
+                  paddingTop: '64px',
+                  paddingBottom: '48px',
+                }
+          }
+        >
+          {hasActiveSearch ? (
+            <ProfileLockup />
+          ) : (
+            <>
+              <HorseLabsLockup />
+              <p
+                style={{
+                  fontFamily: 'Space Grotesk, sans-serif',
+                  fontSize: '15px',
+                  color: '#4A4A50',
+                  maxWidth: '480px',
+                  lineHeight: 1.6,
+                  marginTop: '32px',
+                }}
+              >
+                Análise probabilística de fairplay em partidas de xadrez via
+                Stockfish e heurísticas estatísticas avançadas. Digite o nome de
+                um jogador no campo acima para iniciar.
+              </p>
+            </>
+          )}
+        </section>
 
         {showResults && (
           <section style={{ paddingTop: '32px' }}>

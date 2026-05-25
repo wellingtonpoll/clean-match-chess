@@ -11,6 +11,7 @@ import {
   useState,
 } from 'react'
 import type { GameResult, RiskLevel } from '../components/GameRow'
+import type { PlayerProfile } from './profileTypes'
 
 export type Platform = 'chesscom' | 'lichess'
 
@@ -27,6 +28,8 @@ export interface RunOptions {
   newUsername?: string
 }
 
+export type ProfileStatus = 'idle' | 'loading' | 'ready' | 'not_found' | 'error'
+
 export interface AnalysisContextValue {
   username: string
   setUsername: (u: string) => void
@@ -35,6 +38,9 @@ export interface AnalysisContextValue {
   sessions: Session[]
   isAnalyzing: boolean
   activeUsername: string
+  profile: PlayerProfile | null
+  profileStatus: ProfileStatus
+  profileError: string | null
   runAnalysis: (offset: number, opts?: RunOptions) => Promise<void>
   reset: () => void
 }
@@ -60,16 +66,62 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   const [sessions, setSessions] = useState<Session[]>([])
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [activeUsername, setActiveUsername] = useState('')
+  const [profile, setProfile] = useState<PlayerProfile | null>(null)
+  const [profileStatus, setProfileStatus] = useState<ProfileStatus>('idle')
+  const [profileError, setProfileError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const profileAbortRef = useRef<AbortController | null>(null)
 
   const reset = useCallback(() => {
     abortRef.current?.abort()
     abortRef.current = null
+    profileAbortRef.current?.abort()
+    profileAbortRef.current = null
     setSessions([])
     setActiveUsername('')
     setUsername('')
     setIsAnalyzing(false)
+    setProfile(null)
+    setProfileStatus('idle')
+    setProfileError(null)
   }, [])
+
+  const fetchProfile = useCallback(
+    async (uname: string, plat: Platform): Promise<void> => {
+      profileAbortRef.current?.abort()
+      const abort = new AbortController()
+      profileAbortRef.current = abort
+      setProfileStatus('loading')
+      setProfile(null)
+      setProfileError(null)
+      try {
+        const res = await fetch(
+          `/api/profile?username=${encodeURIComponent(uname)}&platform=${plat}`,
+          { signal: abort.signal }
+        )
+        if (res.status === 404) {
+          setProfileStatus('not_found')
+          const body = (await res.json().catch(() => ({}))) as { message?: string }
+          setProfileError(body.message ?? 'Perfil não encontrado')
+          return
+        }
+        if (!res.ok) {
+          setProfileStatus('error')
+          const body = (await res.json().catch(() => ({}))) as { message?: string }
+          setProfileError(body.message ?? `HTTP ${res.status}`)
+          return
+        }
+        const data = (await res.json()) as PlayerProfile
+        setProfile(data)
+        setProfileStatus('ready')
+      } catch (e) {
+        if ((e as Error).name === 'AbortError') return
+        setProfileStatus('error')
+        setProfileError((e as Error).message)
+      }
+    },
+    []
+  )
 
   const runAnalysis = useCallback(
     async (offset: number, opts?: RunOptions) => {
@@ -91,6 +143,11 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
       if (offset === 0) {
         setActiveUsername(effectiveUsername)
         setSessions([])
+        // Fire the profile fetch in parallel with the SSE stream. The hero
+        // section subscribes to `profile` / `profileStatus` and swaps the
+        // default HorseLabs lockup for the searched-player lockup as soon
+        // as this resolves.
+        void fetchProfile(effectiveUsername, platform)
       }
 
       const sessionId = generateId()
@@ -216,7 +273,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
         setIsAnalyzing(false)
       }
     },
-    [username, platform]
+    [username, platform, fetchProfile]
   )
 
   return (
@@ -229,6 +286,9 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
         sessions,
         isAnalyzing,
         activeUsername,
+        profile,
+        profileStatus,
+        profileError,
         runAnalysis,
         reset,
       }}

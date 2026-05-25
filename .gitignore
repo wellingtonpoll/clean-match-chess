@@ -47,3 +47,7 @@ apps/frontend/tsconfig.tsbuildinfo
 # Frontend Playwright (feature 006)
 apps/frontend/playwright-report/
 apps/frontend/test-results/
+apps/frontend/tests/e2e/__layout_audit__/
+
+# Lichess month-export dumps (used locally to build baselines — too large for git)
+lichess_db_standard_rated_*.pgn.zst
