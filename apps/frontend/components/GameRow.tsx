@@ -301,7 +301,12 @@ export function GameRow({ game }: GameRowProps) {
           )}
         </div>
 
-        {/* Right side: badge + signals + export */}
+        {/* Right side: badge + export only. Dominant-signal chips render
+            on their own full-width wrap row below — moving them out of this
+            column prevents long signal names like
+            `behavioral-patterns/precision-burst` from expanding this column's
+            natural width and shoving the score section right (or wrapping
+            the whole column off the row). */}
         <div
           style={{
             display: 'flex',
@@ -309,33 +314,54 @@ export function GameRow({ game }: GameRowProps) {
             alignItems: 'flex-end',
             gap: '6px',
             flexShrink: 0,
+            maxWidth: '160px',
           }}
         >
           {game.riskLevel && <RiskBadge risk={game.riskLevel} />}
-          {game.dominantSignals && game.dominantSignals.length > 0 && (
-            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              {game.dominantSignals.slice(0, 3).map((sig) => (
-                <span
-                  key={sig}
-                  style={{
-                    fontFamily: 'JetBrains Mono, monospace',
-                    fontSize: '9px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.14em',
-                    padding: '1px 5px',
-                    border: '1px solid rgba(242,239,232,0.14)',
-                    color: '#7A7A80',
-                  }}
-                >
-                  {sig}
-                </span>
-              ))}
-            </div>
-          )}
           {game.score !== undefined && game.score > 0.75 && game.runId && (
             <ExportButton runId={game.runId} />
           )}
         </div>
+
+        {/* Dominant-signal chips occupy their own row by forcing
+            flex-basis: 100% inside the wrapping toggle. Chips themselves can
+            wrap to multiple lines if a single chip is wider than what fits
+            in the remaining width (e.g. very long signal names). */}
+        {game.dominantSignals && game.dominantSignals.length > 0 && (
+          <div
+            data-testid="game-row__chips"
+            style={{
+              flexBasis: '100%',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '4px',
+              paddingLeft: '40px',
+              marginTop: '4px',
+            }}
+          >
+            {game.dominantSignals.slice(0, 3).map((sig) => (
+              <span
+                key={sig}
+                style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '9px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.14em',
+                  padding: '1px 5px',
+                  border: '1px solid rgba(242,239,232,0.14)',
+                  color: '#7A7A80',
+                  maxWidth: '100%',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+                title={sig}
+              >
+                {sig}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Expanded "Análise detalhada" section (US2) */}

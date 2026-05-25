@@ -7,7 +7,11 @@ interface ProgressBarProps {
   color?: string
 }
 
-export function ProgressBar({ value, color = '#B81820' }: ProgressBarProps) {
+// Default fill is neutral (grafite) so the indeterminate / unscored variant
+// does not visually pre-signal "high risk" on pending rows. Determinate
+// callsites pass an explicit risk-coloured value (low/medium/high) on the
+// score-bar in `GameRow`.
+export function ProgressBar({ value, color = '#4A4A50' }: ProgressBarProps) {
   const isIndeterminate = value === undefined
 
   return (

@@ -9,6 +9,66 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — Feature 006 (Frontend UX Improvements, follow-up)
+
+- **Per-game reasoning narrative**. `ExpandedAnalysis` now opens with a
+  score-summary block that explains how the platform arrived at the
+  specific score: it quotes the numeric value, classifies it (BAIXO /
+  MÉDIO / ALTO via `risk_level`), names the confidence-interval width
+  (precisão alta / moderada / incerteza considerável), and frames the
+  signal list with copy that varies by risk (signals that pushed the
+  score up at HIGH vs. signals that were checked but stayed normal at
+  LOW). New `summarizeGame()` in `lib/signalExplanations.ts` is
+  pure-function and unit-tested. Resolves the "explicação detalhada de
+  como a plataforma chegou nesse resultado" issue raised 2026-05-25.
+- **Signal dictionary expanded for namespaced names**. Backend emits both
+  bare (`precision-burst`, `complexity`) and namespaced
+  (`behavioral-patterns/precision-burst`, `complexity-analysis`,
+  `engine-correlation/weighted`) forms; the dictionary now carries
+  explicit entries for both stylings so `explainSignal` no longer falls
+  back to the generic "Sinal técnico" copy for known signals.
+- **Sticky profile hero**. While in profile mode the hero section is
+  `position: sticky; top: var(--header-h)` so the searched player's
+  identity + ratings stay pinned below the Header as the results list
+  scrolls. `Header` now publishes its real `offsetHeight` to the
+  `--header-h` CSS custom property on mount and on window-resize
+  (single-pass + rAF, no ResizeObserver loop), so the sticky offset and
+  the `<main>` top padding track the actual stacking height instead of
+  the static 64 / 112 px fallbacks.
+- **Searched-user hero lockup**. After a search submits, the hero section
+  stays mounted but swaps its content from the default HorseLabs intro to
+  a `ProfileLockup` rendering the searched player's account data:
+  username (48px Instrument Serif, links to the canonical platform URL),
+  title chip when held, platform / country / join date / display name
+  meta-row, and one rating card per game mode reported by the upstream
+  platform (chess.com: rapid/blitz/bullet/daily; lichess:
+  bullet/blitz/rapid/classical/correspondence). Loading and not-found
+  states render in-place so the hero never disappears between submit and
+  result. New API route `app/api/profile/route.ts` proxies chess.com
+  (`/pub/player/{u}` + `/pub/player/{u}/stats`) and lichess
+  (`/api/user/{u}`) into a unified `PlayerProfile` envelope; chess.com
+  calls go out with a polite User-Agent.
+
+### Fixed — Feature 006 (Frontend UX Improvements, follow-up)
+
+- `ProgressBar` default fill colour changed from `#B81820` (sangue-luz / high-risk
+  red) to `#4A4A50` (grafite / neutral). The indeterminate variant is rendered
+  on pending game-rows; previously the red animation pre-signaled "high risk"
+  before any analysis had run. Determinate callsites in `GameRow` continue to
+  pass an explicit risk-coloured fill (low / medium / high), so the score-bar
+  appearance is unchanged. Surfaced via a cross-viewport Playwright probe
+  (`apps/frontend/tests/e2e/layout-audit-daianydias.spec.ts`) that screenshots
+  the daianydias search flow on iPhone SE, iPhone 11 Pro Max, 1280×800,
+  and 1920×1080.
+- `GameRow` dominant-signal chips moved out of the right-hand column into
+  their own full-width row (`flex-basis: 100%`) below the main row. Long
+  chip names such as `behavioral-patterns/precision-burst` previously
+  expanded the right column past the score column, pushing the score
+  section right and breaking row alignment. Chip text now ellipsis-truncates
+  with `title=` tooltip; the right column (RiskBadge + ExportButton) is
+  capped at `max-width: 160px`. Regression guard: new `long-signals`
+  fixture and `05-long-signals` stage in the layout audit.
+
 ### Added — Feature 006 (Frontend UX Improvements)
 
 - **Clickable player links** (US1): player usernames in game cards render as
