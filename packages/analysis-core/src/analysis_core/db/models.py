@@ -305,3 +305,65 @@ class BaselineAnalysisModel(Base):
     )
     analysis_duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class AuditJobModel(Base):
+    """One audit job in the async queue (feature 011 Phase 3).
+
+    Mirrors `migrations/versions/0003_audit_jobs.py`. The frontend
+    `POST /api/audit` inserts a row with status='queued'; a Postgres
+    trigger fires `NOTIFY audit_jobs_new`. The worker daemon LISTENs on
+    that channel, claims via SELECT FOR UPDATE SKIP LOCKED, runs the
+    audit pipeline, and updates status='completed'/'failed' — the
+    second trigger fires `NOTIFY audit_jobs_done`.
+    """
+
+    __tablename__ = "audit_jobs"
+    __table_args__ = (
+        CheckConstraint(
+            "octet_length(pgn_sha256) = 32",
+            name="audit_jobs_pgn_sha256_length",
+        ),
+        CheckConstraint(
+            "subject_color IN ('white', 'black')",
+            name="audit_jobs_subject_color_check",
+        ),
+        CheckConstraint(
+            "status IN ('queued', 'running', 'completed', 'failed', 'aborted')",
+            name="audit_jobs_status_check",
+        ),
+        CheckConstraint(
+            "finished_at IS NULL OR finished_at >= created_at",
+            name="audit_jobs_time_check",
+        ),
+        Index(
+            "idx_audit_jobs_pending",
+            "created_at",
+            postgresql_where=text("status IN ('queued', 'running')"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    pgn_text: Mapped[str] = mapped_column(Text, nullable=False)
+    pgn_sha256: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    subject_color: Mapped[str] = mapped_column(String(8), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        server_default=text("'queued'"),
+    )
+    result_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    audit_run_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
