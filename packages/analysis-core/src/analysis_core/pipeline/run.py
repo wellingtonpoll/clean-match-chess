@@ -74,6 +74,8 @@ def run_single_game(
     engine: EngineFingerprint | None = None,
     engine_path: str | None = None,
     engine_image: str | None = None,
+    engine_depth: int = 18,
+    engine_multipv: int = 5,
     heuristics: tuple[HeuristicVersion, ...] | None = None,
     design_system_version: str = DEFAULT_DESIGN_SYSTEM_VERSION,
     opening_book_sha256: str = DEFAULT_OPENING_BOOK_SHA256,
@@ -137,7 +139,7 @@ def run_single_game(
             logger_db.warning("db.cache.preview_failed", error=str(e))
 
     if analyzer is None and engine_command:
-        with EngineAnalyzer(engine_command) as ea:
+        with EngineAnalyzer(engine_command, depth=engine_depth, multipv=engine_multipv) as ea:
             positions = _analyse_positions(game, ea, book=book)
             run = _build_run(
                 game,

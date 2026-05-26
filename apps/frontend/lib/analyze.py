@@ -32,7 +32,7 @@ from analysis_core.pipeline.run import run_single_game
 from shared_types.game import Game
 
 
-def _resolve_engine_kwargs() -> dict[str, str]:
+def _resolve_engine_kwargs() -> dict[str, str | int]:
     engine_path = os.environ.get("CLEANMATCH_ENGINE_PATH")
     engine_image = os.environ.get("CLEANMATCH_ENGINE_IMAGE")
     if not engine_path and not engine_image:
@@ -42,11 +42,16 @@ def _resolve_engine_kwargs() -> dict[str, str]:
             "cleanmatch-stockfish:sf16). Refusing to silently fall back to "
             "StaticAnalyzer which collapses every score to ~0.316."
         )
-    kwargs: dict[str, str] = {}
+    kwargs: dict[str, str | int] = {}
     if engine_path:
         kwargs["engine_path"] = engine_path
     if engine_image:
         kwargs["engine_image"] = engine_image
+    # UI-friendly defaults: depth=12 multipv=3 → ~5-10s per game on a 6-core
+    # box (vs 60s+ at the pipeline default depth=18 multipv=5). The CLI keeps
+    # the deeper defaults for explicit `cleanmatch audit-game` invocations.
+    kwargs["engine_depth"] = int(os.environ.get("CLEANMATCH_ENGINE_DEPTH", "12"))
+    kwargs["engine_multipv"] = int(os.environ.get("CLEANMATCH_ENGINE_MULTIPV", "3"))
     return kwargs
 
 
