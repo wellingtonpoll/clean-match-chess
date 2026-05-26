@@ -41,6 +41,7 @@ from shared_types.signal import HeuristicVersion, SignalAggregate
 
 from analysis_core.db import cache as db_cache
 from analysis_core.engine.analysis import Analyzer, EngineAnalyzer, StaticAnalyzer
+from analysis_core.engine.stockfish_pool import EnginePool
 from analysis_core.manifest import build_manifest, manifest_hash
 from analysis_core.pipeline.cache import cleanmatch_home, persist_manifest
 from analysis_core.pipeline.opening_book import OpeningBook
@@ -76,6 +77,7 @@ def run_single_game(
     engine_image: str | None = None,
     engine_depth: int = 18,
     engine_multipv: int = 5,
+    engine_pool: EnginePool | None = None,
     heuristics: tuple[HeuristicVersion, ...] | None = None,
     design_system_version: str = DEFAULT_DESIGN_SYSTEM_VERSION,
     opening_book_sha256: str = DEFAULT_OPENING_BOOK_SHA256,
@@ -137,6 +139,25 @@ def run_single_game(
                 return cached
         except (ValueError, AttributeError) as e:
             logger_db.warning("db.cache.preview_failed", error=str(e))
+
+    if analyzer is None and engine_pool is not None:
+        # Pooled path (feature 011 Phase 2). Worker reuse — no podman/Stockfish
+        # spawn per audit. ucinewgame() resets engine state between audits.
+        with engine_pool.worker(depth=engine_depth, multipv=engine_multipv) as pooled:
+            positions = _analyse_positions(game, pooled, book=book)
+            run = _build_run(
+                game,
+                positions,
+                subject=subject,
+                engine=resolved_engine,
+                heuristics=resolved_heuristics,
+                design_system_version=design_system_version,
+                opening_book_sha256=resolved_book_sha,
+                persist_root=persist_root,
+            )
+            if not no_cache and run.manifest is not None:
+                db_cache.persist(run, run.manifest, game=game)
+            return run
 
     if analyzer is None and engine_command:
         with EngineAnalyzer(engine_command, depth=engine_depth, multipv=engine_multipv) as ea:
