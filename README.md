@@ -47,6 +47,22 @@ uv run cleanmatch --help
 **Requirements**: Python 3.11+, [Stockfish 16+](https://stockfishchess.org/download/),
 [Postgres 14+](https://www.postgresql.org/) (optional — analysis cache; degrades gracefully when absent), Node 20+ (for the frontend SPA).
 
+## Frontend dev (feature 012 orchestrator)
+
+```bash
+./scripts/dev.sh
+```
+
+Single command that boots Postgres, applies migrations, cleans zombie Stockfish containers, starts the audit worker daemon in the background, and launches the Next.js dev server on `http://localhost:3000`. Ctrl-C tears everything down except Postgres (which persists its data volume).
+
+Override the pool / engine config inline:
+
+```bash
+CLEANMATCH_POOL_SIZE=2 CLEANMATCH_ENGINE_DEPTH=8 ./scripts/dev.sh
+```
+
+The frontend's audit pipeline depends on the worker process — without `dev.sh` (or starting `apps/frontend/lib/audit_worker.py` manually), submitted audits queue forever and the UI shows "pending" indefinitely. Feature 012 adds a health endpoint + UI banner that detects worker-offline.
+
 ## Database (feature 008 — analysis cache)
 
 Identical PGN re-runs return in <1 s instead of 30–60 s once Postgres

@@ -7,11 +7,19 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useRef,
   useState,
 } from 'react'
 import type { GameResult, RiskLevel } from '../components/GameRow'
 import type { PlayerProfile } from './profileTypes'
+
+export interface WorkerHealth {
+  alive: boolean
+  queued: number
+  running: number
+  lastDrain: string | null
+}
 
 export type Platform = 'chesscom' | 'lichess'
 
@@ -41,6 +49,7 @@ export interface AnalysisContextValue {
   profile: PlayerProfile | null
   profileStatus: ProfileStatus
   profileError: string | null
+  workerHealth: WorkerHealth
   runAnalysis: (offset: number, opts?: RunOptions) => Promise<void>
   reset: () => void
 }
@@ -82,10 +91,16 @@ interface AuditStatusResponse {
   error: string | null
 }
 
+// Feature 012 — abort the poll if the worker is silent (no status
+// transition past 'queued') for this many ms. Avoids the previous
+// "pending forever" UX when the daemon isn't running.
+const POLL_NO_PROGRESS_TIMEOUT_MS = 60_000
+
 /**
  * Poll `/api/audit/[job_id]` with linear backoff (1s → 2s → 4s, cap 4s)
- * until the job reaches a terminal state, then patch the corresponding
- * game row in the session.
+ * until the job reaches a terminal state. If `POLL_NO_PROGRESS_TIMEOUT_MS`
+ * elapses without seeing the status advance past 'queued', mark the game
+ * as error so the UI doesn't spin forever.
  */
 async function pollJob(
   job: PollJobInput,
@@ -95,6 +110,9 @@ async function pollJob(
 ): Promise<void> {
   const delays = [1000, 2000, 4000]
   let attempt = 0
+  const startedAt = Date.now()
+  let lastObservedStatus: AuditStatusResponse['status'] | null = null
+
   while (!abortSignal.aborted) {
     const res = await fetch(`/api/audit/${job.job_id}`, { signal: abortSignal })
     const data = (await res.json()) as AuditStatusResponse
@@ -138,11 +156,36 @@ async function pollJob(
       return
     }
 
+    // No-progress timeout: status stayed 'queued' for too long → worker dead.
+    if (
+      data.status === 'queued' &&
+      lastObservedStatus === 'queued' &&
+      Date.now() - startedAt > POLL_NO_PROGRESS_TIMEOUT_MS
+    ) {
+      const errored: GameResult = {
+        idx: job.idx,
+        status: 'error',
+        error: 'worker not responding (run ./scripts/dev.sh)',
+        headers: job.headers,
+      }
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId
+            ? { ...s, games: s.games.map((g) => (g.idx === job.idx ? errored : g)) }
+            : s
+        )
+      )
+      return
+    }
+    lastObservedStatus = data.status
+
     const delay = delays[Math.min(attempt, delays.length - 1)]
     attempt++
     await new Promise((r) => setTimeout(r, delay))
   }
 }
+
+const WORKER_HEALTH_REFRESH_MS = 30_000
 
 export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   const [username, setUsername] = useState('')
@@ -153,8 +196,50 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<PlayerProfile | null>(null)
   const [profileStatus, setProfileStatus] = useState<ProfileStatus>('idle')
   const [profileError, setProfileError] = useState<string | null>(null)
+  // Feature 012 — track worker daemon liveness for the WorkerBanner.
+  const [workerHealth, setWorkerHealth] = useState<WorkerHealth>({
+    alive: true,
+    queued: 0,
+    running: 0,
+    lastDrain: null,
+  })
   const abortRef = useRef<AbortController | null>(null)
   const profileAbortRef = useRef<AbortController | null>(null)
+
+  // Health probe: once on mount, then every 30s. Failures (DB down, route
+  // 5xx) are treated as worker-down so the banner appears immediately.
+  useEffect(() => {
+    let cancelled = false
+    async function probe() {
+      try {
+        const res = await fetch('/api/audit/health', { cache: 'no-store' })
+        const data = (await res.json()) as {
+          worker_alive: boolean
+          queued: number
+          running: number
+          last_drain: string | null
+        }
+        if (!cancelled) {
+          setWorkerHealth({
+            alive: data.worker_alive,
+            queued: data.queued,
+            running: data.running,
+            lastDrain: data.last_drain,
+          })
+        }
+      } catch {
+        if (!cancelled) {
+          setWorkerHealth((s) => ({ ...s, alive: false }))
+        }
+      }
+    }
+    void probe()
+    const handle = setInterval(probe, WORKER_HEALTH_REFRESH_MS)
+    return () => {
+      cancelled = true
+      clearInterval(handle)
+    }
+  }, [])
 
   const reset = useCallback(() => {
     abortRef.current?.abort()
@@ -351,6 +436,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
         profile,
         profileStatus,
         profileError,
+        workerHealth,
         runAnalysis,
         reset,
       }}
