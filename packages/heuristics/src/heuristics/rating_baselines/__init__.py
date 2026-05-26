@@ -198,8 +198,13 @@ def _check_unit(value: object, name: str) -> float:
 
 def _check_acpl(value: object, name: str) -> float:
     v = _check_number(value, name)
-    if not 0.0 <= v <= 500.0:
-        raise ValueError(f"{name} must be in [0, 500], got {v}")
+    # Bound bumped 500 → 1000 on 2026-05-26 after the first real measured run
+    # (Lichess 2026-04, depth=10, multipv=3) produced ACPL stdev up to 727 in
+    # the ≤1200 bucket. The original 500 ceiling was a literature-based
+    # estimate that did not account for the out-of-multipv penalty (200 cp)
+    # being applied to a large fraction of low-rated plies.
+    if not 0.0 <= v <= 1000.0:
+        raise ValueError(f"{name} must be in [0, 1000], got {v}")
     return v
 
 

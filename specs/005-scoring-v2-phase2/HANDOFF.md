@@ -49,23 +49,17 @@ uv run pytest packages/heuristics/tests/test_real_baselines_smoke.py
   `cleanmatch audit-game tests/fixtures/audit_v2_smoke.pgn --output json > /tmp/pre.json`.
   After T008, repeat → `/tmp/post.json`. Diff goes into `CHANGELOG.md`.
 
-#### T011 + T012 + T013 — Real `gm2600.bin`
+#### T011 + T012 + T013 — Real `gm2600.bin` — **[X] SHIPPED (superseded substitution)**
 
-Follow `quickstart.md §2`:
+The originally-documented `gm2600.bin` upstream URL became unreachable mid-feature. Substitution: a Lichess-broadcast-derived Polyglot book was built from 2025-02 + 2025-03 + 2025-04 OTB archives (60,644 master games, 425,062 entries) and committed at `packages/analysis-core/data/opening_book.bin` (6.5 MB, sha256 `dd0c9b50f75274b421ee9bfa12b45920b38124c9e2c7768f1179d130357c4532`). Build script: `packages/analysis-core/scripts/build_book_from_broadcasts.py`. License: CC-BY-SA 4.0 inherited from upstream Lichess broadcasts. Rationale + provenance documented in `CHANGELOG.md` Feature 005 `### Added` block.
+
+Verification command still applies:
 
 ```bash
-curl -L -o /tmp/gm2600.bin \
-  https://github.com/michaelb/Sayuri-chess-bot/raw/main/books/gm2600.bin
-sha256sum /tmp/gm2600.bin   # record this value
-
-cp /tmp/gm2600.bin packages/analysis-core/data/opening_book.bin
-# Edit packages/analysis-core/data/README.md per data-model.md §4.
-
 uv run pytest packages/analysis-core/tests/test_real_book_coverage.py
 ```
 
-- **Estimated time**: < 5 min.
-- **Failure mode**: if upstream sha256 doesn't match any documented canonical value, find an alternate mirror with a matching sha256 or escalate. Do NOT commit a tampered file.
+The four tests in that file unskip automatically because the shipped book is > 100 KB (`_book_is_stub()` returns `False`).
 
 ---
 

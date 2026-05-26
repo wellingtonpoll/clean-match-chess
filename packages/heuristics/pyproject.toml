@@ -7,12 +7,23 @@ dependencies = [
     "pydantic>=2.7",
     "shared-types",
     "numpy>=2.0",
+    # build_baselines.py imports analysis_core.db for the Postgres-backed
+    # T007 v2 build (feature 007). Runtime audit code paths in heuristics
+    # do NOT use this — only the maintainer-side script does.
+    "analysis-core",
 ]
 
 [project.optional-dependencies]
 test = [
     "pytest>=8",
     "pytest-cov>=5",
+]
+# Streaming PGN ingest from .zst archives (feature 007 build_baselines).
+# Only the maintainer-machine script imports this; runtime audit pipeline
+# does not depend on it.
+dev = [
+    "zstandard>=0.22,<1.0",
+    "jsonschema>=4.17,<5",
 ]
 
 [build-system]

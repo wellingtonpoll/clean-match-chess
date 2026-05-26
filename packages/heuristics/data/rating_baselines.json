@@ -1,77 +1,77 @@
 {
-  "version": "1.0.0",
-  "generated_at": "2026-05-24T04:09:14Z",
-  "source_dataset": "hand-curated-stub (Phase 1 fallback; lit. values, not measured)",
+  "version": "2.0.0",
+  "generated_at": "2026-05-26T19:00:32Z",
+  "source_dataset": "lichess_db_standard_rated_2026-04 (sha256=a6dc976bda3e6f543929e9448420482f2fe827b09e16c1005ca9a6ef66e7336d, run_id=9cce7d04-ce2f-4eaf-8935-d25d4f25a81a)",
   "buckets": [
     {
       "bucket_label": "≤1200",
       "rating_low": 1,
       "rating_high": 1200,
-      "expected_top1": 0.32,
-      "expected_weighted_top1": 0.3,
-      "expected_acpl_mean": 85.0,
-      "expected_acpl_stdev": 35.0,
-      "sample_size": 100
+      "expected_top1": 0.3311,
+      "expected_weighted_top1": 0.442,
+      "expected_acpl_mean": 521.28,
+      "expected_acpl_stdev": 727.93,
+      "sample_size": 5000
     },
     {
       "bucket_label": "1201-1500",
       "rating_low": 1201,
       "rating_high": 1500,
-      "expected_top1": 0.38,
-      "expected_weighted_top1": 0.36,
-      "expected_acpl_mean": 65.0,
-      "expected_acpl_stdev": 28.0,
-      "sample_size": 100
+      "expected_top1": 0.357,
+      "expected_weighted_top1": 0.4885,
+      "expected_acpl_mean": 330.76,
+      "expected_acpl_stdev": 510.93,
+      "sample_size": 5000
     },
     {
       "bucket_label": "1501-1800",
       "rating_low": 1501,
       "rating_high": 1800,
-      "expected_top1": 0.45,
-      "expected_weighted_top1": 0.43,
-      "expected_acpl_mean": 48.0,
-      "expected_acpl_stdev": 22.0,
-      "sample_size": 100
+      "expected_top1": 0.3725,
+      "expected_weighted_top1": 0.5197,
+      "expected_acpl_mean": 253.61,
+      "expected_acpl_stdev": 404.13,
+      "sample_size": 5000
     },
     {
       "bucket_label": "1801-2100",
       "rating_low": 1801,
       "rating_high": 2100,
-      "expected_top1": 0.52,
-      "expected_weighted_top1": 0.5,
-      "expected_acpl_mean": 35.0,
-      "expected_acpl_stdev": 18.0,
-      "sample_size": 100
+      "expected_top1": 0.3925,
+      "expected_weighted_top1": 0.5487,
+      "expected_acpl_mean": 188.46,
+      "expected_acpl_stdev": 298.17,
+      "sample_size": 5000
     },
     {
       "bucket_label": "2101-2400",
       "rating_low": 2101,
       "rating_high": 2400,
-      "expected_top1": 0.6,
-      "expected_weighted_top1": 0.58,
-      "expected_acpl_mean": 25.0,
-      "expected_acpl_stdev": 14.0,
-      "sample_size": 100
+      "expected_top1": 0.429,
+      "expected_weighted_top1": 0.5933,
+      "expected_acpl_mean": 149.53,
+      "expected_acpl_stdev": 241.87,
+      "sample_size": 5000
     },
     {
       "bucket_label": "2401+",
       "rating_low": 2401,
       "rating_high": 3500,
-      "expected_top1": 0.68,
-      "expected_weighted_top1": 0.66,
-      "expected_acpl_mean": 18.0,
-      "expected_acpl_stdev": 10.0,
-      "sample_size": 100
+      "expected_top1": 0.519,
+      "expected_weighted_top1": 0.7194,
+      "expected_acpl_mean": 101.99,
+      "expected_acpl_stdev": 164.23,
+      "sample_size": 5000
     },
     {
       "bucket_label": "rating-unknown",
       "rating_low": null,
       "rating_high": null,
-      "expected_top1": 0.52,
-      "expected_weighted_top1": 0.5,
-      "expected_acpl_mean": 48.0,
-      "expected_acpl_stdev": 22.0,
-      "sample_size": 100
+      "expected_top1": 0.3825,
+      "expected_weighted_top1": 0.5342,
+      "expected_acpl_mean": 221.04,
+      "expected_acpl_stdev": 351.15,
+      "sample_size": 5000
     }
   ]
 }
