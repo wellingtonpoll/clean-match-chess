@@ -153,7 +153,23 @@ def run_single_game(
                 db_cache.persist(run, run.manifest, game=game)
             return run
 
-    analyzer = analyzer or StaticAnalyzer()
+    if analyzer is None:
+        # No analyzer and no resolvable engine_command — fall back to the
+        # hermetic StaticAnalyzer. This path is intended ONLY for tests + dry
+        # runs: StaticAnalyzer returns canned evaluations that collapse every
+        # game's suspicion score to a fixed ~0.316 (= √0.1), which is the bug
+        # that motivated feature 009. Production callers MUST pass either
+        # `engine_path` / `engine_image` (CLI + frontend) or an explicit
+        # `analyzer` (in-process integration tests). The warning below makes
+        # accidental production fallbacks visible in structured logs.
+        import structlog
+
+        structlog.get_logger(__name__).warning(
+            "pipeline.fallback_to_static_analyzer",
+            pgn_sha256=game.pgn_sha256[:16],
+            hint="set CLEANMATCH_ENGINE_IMAGE or pass engine_path/engine_image",
+        )
+        analyzer = StaticAnalyzer()
     positions = _analyse_positions(game, analyzer, book=book)
     run = _build_run(
         game,

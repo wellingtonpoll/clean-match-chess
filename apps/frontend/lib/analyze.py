@@ -1,8 +1,24 @@
 #!/usr/bin/env python3
-"""Streaming game analyzer — outputs JSONL to stdout, one line per completed game."""
+"""Streaming game analyzer — outputs JSONL to stdout, one line per completed game.
+
+Engine configuration (2026-05-26): without an engine handle the audit pipeline
+silently falls back to `StaticAnalyzer`, whose canned per-position evaluations
+collapse the suspicion score onto a fixed ~0.316 (= √0.1) for every game.
+We resolve the engine via these env vars, in order:
+
+  CLEANMATCH_ENGINE_PATH    Path to a local Stockfish binary.
+  CLEANMATCH_ENGINE_IMAGE   Docker/Podman image (e.g. cleanmatch-stockfish:sf16).
+
+Optional:
+  CLEANMATCH_ENGINE_DEPTH   Search depth (default: pipeline default = 10).
+  CLEANMATCH_ENGINE_MULTIPV Top-K candidates (default: pipeline default = 5).
+
+If both are absent we error out instead of silently producing garbage scores.
+"""
 
 import concurrent.futures
 import json
+import os
 import sys
 
 sys.path.insert(0, "/home/mestre/Documents/repositories/clean-match-chess")
@@ -16,12 +32,33 @@ from analysis_core.pipeline.run import run_single_game
 from shared_types.game import Game
 
 
+def _resolve_engine_kwargs() -> dict[str, str]:
+    engine_path = os.environ.get("CLEANMATCH_ENGINE_PATH")
+    engine_image = os.environ.get("CLEANMATCH_ENGINE_IMAGE")
+    if not engine_path and not engine_image:
+        raise RuntimeError(
+            "no Stockfish engine configured — set CLEANMATCH_ENGINE_PATH "
+            "(local binary) or CLEANMATCH_ENGINE_IMAGE (e.g. "
+            "cleanmatch-stockfish:sf16). Refusing to silently fall back to "
+            "StaticAnalyzer which collapses every score to ~0.316."
+        )
+    kwargs: dict[str, str] = {}
+    if engine_path:
+        kwargs["engine_path"] = engine_path
+    if engine_image:
+        kwargs["engine_image"] = engine_image
+    return kwargs
+
+
+_ENGINE_KWARGS = _resolve_engine_kwargs()
+
+
 def analyze_game(idx: int, pgn: str, headers: dict) -> dict:
     try:
         game: Game = load_pgn_text(pgn, source="chesscom")
         if not is_eligible_for_scoring(game):
             return {"idx": idx, "error": "too_short", "headers": headers}
-        run = run_single_game(game)
+        run = run_single_game(game, **_ENGINE_KWARGS)
         score = run.score.score if run.score else 0.0
         risk = run.score.risk_level.value if run.score else "low"
         ci = list(run.score.confidence_interval) if run.score else [0.0, 1.0]
