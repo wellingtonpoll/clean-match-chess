@@ -9,6 +9,12 @@ dependencies = [
     "httpx>=0.27",
     "structlog>=24",
     "shared-types",
+    # Feature 008 — Postgres-backed analysis cache. The runtime gracefully
+    # degrades when `DATABASE_URL` is unset, so these are runtime
+    # dependencies rather than optional extras.
+    "sqlalchemy>=2.0,<3",
+    "psycopg[binary]>=3.2,<4",
+    "alembic>=1.13,<2",
 ]
 
 [project.optional-dependencies]

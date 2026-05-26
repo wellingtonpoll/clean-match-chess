@@ -51,3 +51,9 @@ apps/frontend/tests/e2e/__layout_audit__/
 
 # Lichess month-export dumps (used locally to build baselines — too large for git)
 lichess_db_standard_rated_*.pgn.zst
+
+# Environment files (feature 008 / 009+). Never commit real credentials.
+# `.env.example` IS committed as the template; concrete .env is not.
+.env
+.env.local
+.env.*.local

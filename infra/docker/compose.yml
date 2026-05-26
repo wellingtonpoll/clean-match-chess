@@ -1,0 +1,33 @@
+# Clean Match Chess local infrastructure.
+#
+# Today: Postgres 17 for the analysis-result cache (feature 008).
+# Future: redis (rate limiting), nginx (TLS), etc.
+#
+# Usage:
+#   docker compose -f infra/docker/compose.yml up -d postgres
+#   docker compose -f infra/docker/compose.yml ps
+#   docker compose -f infra/docker/compose.yml down            # stop, keep volume
+#   docker compose -f infra/docker/compose.yml down -v         # stop + nuke data
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: cleanmatch-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cleanmatch}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cleanmatch}
+      POSTGRES_DB: ${POSTGRES_DB:-cleanmatch}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - cleanmatch_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-cleanmatch}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  cleanmatch_pg_data:
+    name: cleanmatch_pg_data

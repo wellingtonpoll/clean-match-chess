@@ -34,7 +34,32 @@ uv sync
 uv run cleanmatch --help
 ```
 
-**Requirements**: Python 3.11+, [Stockfish 16+](https://stockfishchess.org/download/)
+**Requirements**: Python 3.11+, [Stockfish 16+](https://stockfishchess.org/download/),
+[Postgres 14+](https://www.postgresql.org/) (optional — analysis cache; degrades gracefully when absent).
+
+## Database (feature 008 — analysis cache)
+
+Identical PGN re-runs return in <1 s instead of 30–60 s once Postgres
+is running. Cache is invisible to the user: `cleanmatch audit-game`
+consults the DB before spawning Stockfish and persists the result after
+analysis.
+
+```bash
+# Start the bundled Postgres
+docker compose -f infra/docker/compose.yml up -d postgres
+# or: podman compose -f infra/docker/compose.yml up -d postgres
+
+# Apply schema
+uv run alembic -c packages/analysis-core/alembic.ini upgrade head
+
+# Set the connection URI for your shell (or copy .env.example to .env)
+export DATABASE_URL=postgresql+psycopg://cleanmatch:cleanmatch@localhost:5432/cleanmatch
+```
+
+When `DATABASE_URL` is unset OR Postgres is unreachable, the audit runs
+without caching and logs a structured warning. See
+[`packages/analysis-core/docs/cache.md`](packages/analysis-core/docs/cache.md)
+for the full ops runbook.
 
 ## Repository layout
 

@@ -9,6 +9,61 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — Feature 008 (Postgres-backed analysis cache)
+
+- **Analysis-result cache backed by Postgres**. `cleanmatch audit-game`
+  (and the SSE-proxied frontend that spawns it) now consults a Postgres
+  cache before spawning Stockfish. Identical PGN re-runs return in
+  ~1 s wall-clock (Python startup dominated) versus ~145 s for a
+  cache miss — a measured **~145× speedup** on the smoke fixture.
+- **Composite cache key** `(pgn_sha256, manifest_sha256)`. `manifest_sha256`
+  is the existing `analysis_core.manifest.manifest_hash` output, which
+  covers engine binary sha256, opening book sha256, heuristic versions,
+  scoring threshold version, signal versions, rating baselines version
+  + sha256, design system version. **Algorithm bumps automatically
+  invalidate every cached row** — no manual purge needed.
+- **`--no-cache` flag finally honored.** Previously accepted-and-ignored
+  on `audit-game` and `audit-username`; now plumbed through to
+  `run_single_game(..., no_cache=...)` and skips both lookup AND persist
+  so forced re-runs never pollute the row count.
+- **Graceful degradation.** When `DATABASE_URL` is unset OR Postgres is
+  unreachable, the audit runs at full cost with a structured warning
+  on stderr (`event=db.cache.lookup_unreachable` /
+  `db.cache.persist_unreachable`) and the JSON envelope on stdout is
+  unchanged. Developer machines without a running database continue to
+  work without modification.
+- **Reserved auth columns.** The `audit_runs` schema includes nullable
+  `user_id UUID` and `tenant_id UUID` columns from the initial migration
+  (`0001_init.py`) — no FK constraints yet. The incoming feature 009
+  (auth + recurring subscriptions) can add the `users` and `tenants`
+  tables and attach the FKs via a deferred migration without restructuring
+  the cache.
+- New files:
+  - `infra/docker/compose.yml` — Postgres 17-alpine service + named
+    volume.
+  - `infra/docker/README.md` — compose + ops quickstart.
+  - `.env.example` — `DATABASE_URL` template (real `.env` gitignored).
+  - `packages/analysis-core/alembic.ini` + `migrations/env.py` +
+    `migrations/versions/0001_init.py` — Alembic scaffold + initial
+    schema (`audit_runs` table, UNIQUE constraint, 4 secondary indexes,
+    `pgcrypto` extension for `gen_random_uuid()`).
+  - `packages/analysis-core/src/analysis_core/db/{__init__,models,session,cache}.py`
+    — SQLAlchemy 2.0 model + sync session factory + `lookup()` / `persist()`
+    with structured graceful-degradation + password-masked URL logging.
+  - `packages/analysis-core/docs/cache.md` — ops runbook (env vars,
+    nuke + rebuild recipe, retention policy stub).
+  - `tests/integration/test_postgres_cache.py` — 4 tests
+    (double-audit-hits-cache, no-cache-skips-persist, db-down-graceful,
+    migration-roundtrip). Skip cleanly when `DATABASE_URL` is unset.
+- New deps in `packages/analysis-core/pyproject.toml`:
+  `sqlalchemy>=2.0,<3`, `psycopg[binary]>=3.2,<4`, `alembic>=1.13,<2`
+  (all runtime — the cache layer's `init_engine()` is invoked
+  unconditionally and degrades gracefully).
+- CI: the existing `test` job in `.github/workflows/ci.yml` gains a
+  `services: postgres` block (port 5432, `pg_isready` healthcheck) and
+  runs `alembic upgrade head` before pytest. Integration tests now run
+  against a real Postgres on every PR.
+
 ### Added — Feature 006 (Frontend UX Improvements, follow-up)
 
 - **Per-game reasoning narrative**. `ExpandedAnalysis` now opens with a
