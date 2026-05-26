@@ -1,12 +1,14 @@
 # Implementation Plan: Scoring v2 Phase 2 Completion
 
-**Branch**: `007-scoring-v2-phase2-completion` | **Date**: 2026-05-25 | **Spec**: [spec.md](./spec.md)
+**Branch**: `007-scoring-v2-phase2-completion` | **Date**: 2026-05-25 (rev 2026-05-26 T007 v2) | **Spec**: [spec.md](./spec.md)
 
 **Input**: Feature specification from `/specs/007-scoring-v2-phase2-completion/spec.md`
 
 ## Summary
 
-Close all four deferrals from Feature 005 (CHANGELOG.md:139-153 `Pending (Feature 005)`): real measured rating baselines (replaces literature stub), ≥20 engine-assisted PGN fixtures, full FPR-gate validation run, and measured-metric documentation in CHANGELOG. Unblocks `[2.1.0]` release. Technical approach: implement the currently-unimplemented `build_buckets_real()` in `packages/heuristics/scripts/build_baselines.py` (streams the Lichess 2026-04 archive via `zstdcat`, reservoir-samples 5000 games per bucket with seed=0 deterministic RNG, runs SF16 depth 12 over the 30 000 sampled games, writes schema-valid JSON), then runs the full FPR-gate against real baselines + real engine-assisted corpus.
+Close all four deferrals from Feature 005 (CHANGELOG.md:139-153 `Pending (Feature 005)`): real measured rating baselines (replaces literature stub), ≥20 engine-assisted PGN fixtures, full FPR-gate validation run, and measured-metric documentation in CHANGELOG. Unblocks `[2.1.0]` release. Technical approach: implement the currently-unimplemented `build_buckets_real()` in `packages/heuristics/scripts/build_baselines.py` (streams the Lichess 2026-04 archive via `zstdcat`, reservoir-samples 5000 games per bucket with seed=0 deterministic RNG, runs SF16 depth 10 over the 30 000 sampled games, writes schema-valid JSON), then runs the full FPR-gate against real baselines + real engine-assisted corpus.
+
+**T007 v2 (2026-05-26)** — after the v1 build lost 30k in-RAM analyses to a `ProcessPoolExecutor` shutdown hang (podman engine handles never released), the build pipeline was redesigned around Postgres persistence (feature 008 DB infra). Every Stockfish analysis lands in `baseline_analyses` the moment it completes; Phase-1 reservoir state flushes every 100k games scanned. A crash anywhere loses at most ~one in-flight analysis or one flush window. Restart via `--run-id <uuid>` re-claims pending samples. Production rollout via `pg_dump --table=baseline_* --table=pgn_corpus`. Detailed plan in `/home/mestre/.claude/plans/smooth-jumping-lightning.md`.
 
 ## Technical Context
 

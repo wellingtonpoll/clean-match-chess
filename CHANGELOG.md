@@ -9,6 +9,59 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — Feature 007 (Scoring v2 Phase 2 completion — T007 v2 Postgres-backed baselines)
+
+- **Postgres-backed `build_baselines.py`**. The maintainer-side baseline build
+  (T007) is now durable across crashes: every Stockfish analysis lands in
+  `baseline_analyses` the moment it completes, and Phase-1 reservoir state
+  flushes to `baseline_samples` every 100k games scanned. The previous
+  RAM-only implementation lost ~7 h of work to a ProcessPoolExecutor
+  shutdown hang (podman engine handles never released). The new pipeline
+  loses at most ~one in-flight analysis (~30 s) or one flush window on any
+  single failure mode.
+- **Four new tables + view in migration `0002_baseline_persistence.py`**:
+  - `baseline_runs` — one row per build attempt with full parameter set
+    (archive sha256, engine binary sha256, seed, depth, multipv, workers,
+    script version), status state machine (`running → completed | failed |
+    aborted`), counters (`total_scanned`, `total_sampled`, `total_analysed`),
+    and CHECK constraints on sha256 length, positive parameters, and
+    `finished_at ≥ started_at`.
+  - `pgn_corpus` — dedup'd PGN store keyed by sha256, shared across runs.
+  - `baseline_samples` — one row per (run, bucket, reservoir position)
+    with the partial-index `idx_baseline_samples_pending` for fast claim
+    queries, `DEFERRABLE INITIALLY DEFERRED` FK to `pgn_corpus`, and
+    CHECK constraints on bucket-label enum, Elo range, and non-negative
+    counters.
+  - `baseline_analyses` — one row per analysed sample with `DOUBLE PRECISION`
+    rates + ACPL, optional `error_message`, and CHECK constraints on
+    `[0,1]` rates + non-negative ACPL/ply count.
+  - `fn_mark_sample_analysed()` trigger function flips `baseline_samples.analysed
+    = TRUE` after each `baseline_analyses` INSERT. Trigger function CREATEd
+    before TRIGGER reference per Postgres ordering rules.
+  - `baseline_buckets` view aggregates per-(run, bucket) means + population
+    stdev with `WHERE eligible_plies >= 10 AND error_message IS NULL`.
+- **Repository layer at `packages/analysis-core/src/analysis_core/db/baseline_store.py`**
+  with `create_run()`, `flush_reservoir()` (chunked at 5000 rows to stay
+  under psycopg's 65535-param-per-query cap), `claim_sample()`
+  (`SELECT FOR UPDATE SKIP LOCKED` + 15-min stale-claim recovery),
+  `persist_analysis()`, `mark_run_completed()` / `mark_run_failed()`,
+  `fetch_bucket_aggregates()`, and `compute_rating_unknown_row()` (the
+  elementwise median is computed in Python since the view only returns
+  the 6 rated buckets).
+- **`--run-id <uuid>` CLI flag** resumes an existing run by skipping
+  Phase 1; workers re-claim any sample with `claimed_at < NOW() - 15min`
+  AND `analysed = FALSE`. Crashed-mid-analysis samples are eligible for
+  re-claim automatically.
+- **16 new tests at `packages/analysis-core/tests/test_baseline_store.py`**
+  exercising end-to-end create/flush/claim/persist/aggregate flows + the
+  `SKIP LOCKED` no-double-claim invariant + stale-claim recovery + trigger
+  side-effect + `mark_run_failed("aborted")` semantics. All pass against
+  the dev Postgres in 1.5 s.
+- **Production dump recipe** documented in `docs/heuristics.md`:
+  `pg_dump --table=baseline_* --table=pgn_corpus -Fc` produces a single
+  durable artifact; restore is `alembic upgrade head` + `pg_restore --data-only`
+  on the target host.
+
 ### Added — Feature 008 (Postgres-backed analysis cache)
 
 - **Analysis-result cache backed by Postgres**. `cleanmatch audit-game`

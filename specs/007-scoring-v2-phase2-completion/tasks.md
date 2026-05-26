@@ -29,6 +29,14 @@
 
 ## Phase 2 — User Story A: real baselines (P1)
 
+> **Note (T007 v2, 2026-05-26)**: T004 originally specified a pickle-checkpoint
+> two-phase architecture. After the v1 run lost 30000 in-RAM analyses to a
+> podman-engine handle leak in `ProcessPoolExecutor.shutdown`, the
+> architecture was migrated to Postgres-backed persistence. Tasks T007a-T007e
+> below replace the previous T004 + T007 with the new flow; the old `[X]`
+> tasks remain marked complete because their underlying outputs (zstd dep,
+> SF16 image, sample reservoir code, schema validation) carried over.
+
 - [ ] **T004** [USA, ⇐ T002] Rewrite `build_buckets_real()` in `packages/heuristics/scripts/build_baselines.py`. Implements:
   - `DEFAULT_MONTH = "2026-04"` (R1)
   - CLI flags: `--input-zst PATH` (default `./lichess_db_standard_rated_2026-04.pgn.zst`), `--stockfish-cmd CMD` (default Docker per R5, fallback `shutil.which("stockfish")`), `--workers INT` (default 6), `--per-bucket-sample INT` (default 5000), `--depth INT` (default 12), `--resume-from CHECKPOINT_DIR` (default `/tmp/baselines-007/`)
@@ -38,6 +46,22 @@
   - `_analyze_sample(games, stockfish_cmd, depth, workers) -> per-bucket stats`: per-position SF16 depth-12; computes top-1 / weighted-top-1 / ACPL; aggregates to mean + population stdev per bucket
   - `build_buckets_real(...)` returns 6 measured buckets + `rating-unknown` as elementwise median per R4
   - `source_dataset = f"lichess_db_standard_rated_2026-04 (sha256={archive_sha256})"`
+
+### Phase 2b — T007 v2: Postgres-backed re-implementation (2026-05-26)
+
+- [X] **T007a** Rebase branch `007-scoring-v2-phase2-completion` onto `main` to absorb feature 008's DB infrastructure (`analysis_core.db.session`, `analysis_core.db.models`, alembic scaffold). Resolve `.gitignore` + `README.md` conflicts. Start podman compose Postgres. Verify with `\dt`.
+- [X] **T007b** [⇐ T007a] Migration `packages/analysis-core/migrations/versions/0002_baseline_persistence.py` adds 4 tables (`baseline_runs`, `pgn_corpus`, `baseline_samples`, `baseline_analyses`), trigger function `fn_mark_sample_analysed`, trigger `trg_mark_sample_analysed`, view `baseline_buckets`. Extend `analysis_core.db.models` with 4 new ORM classes mirroring the migration. Verify `alembic upgrade head` + `alembic downgrade -1` round-trip is clean.
+- [X] **T007c** [⇐ T007b] Repository layer at `packages/analysis-core/src/analysis_core/db/baseline_store.py`: `create_run()`, `flush_reservoir()` (chunked at 5000 rows per psycopg's 65535-param cap), `claim_sample()` (`SELECT FOR UPDATE SKIP LOCKED` + 15-min stale-claim recovery), `persist_analysis()`, `mark_phase1_done()`, `mark_run_completed()`, `mark_run_failed()`, `fetch_bucket_aggregates()`, `compute_rating_unknown_row()`. Plus 16 unit tests at `packages/analysis-core/tests/test_baseline_store.py` covering create / upsert / claim concurrency / stale recovery / trigger / aggregates / lifecycle.
+- [X] **T007d** [⇐ T007c] Refactor `packages/heuristics/scripts/build_baselines.py`:
+  - Drop `write_checkpoints` / `read_checkpoints` / `_safe_label` (pickle path)
+  - Drop `_worker_analyse` / `analyse_samples_parallel` / `analyse_samples` (RAM-only paths)
+  - Add `_stream_with_db_flush()` — Phase 1 with periodic flush every `--flush-every` games (default 100k)
+  - Add `_worker_claim_loop()` — workers loop claim→analyse→persist until no more pending samples
+  - Add `analyse_samples_against_db()` — pool orchestration + periodic progress polling
+  - New CLI flag `--run-id <uuid>` for resume (skips Phase 1)
+  - New CLI flag `--flush-every <int>` to tune Phase-1 flush cadence
+  - Add `analysis-core` to `packages/heuristics/pyproject.toml` runtime deps
+- [ ] **T007e** [⇐ T007d] Execute real build on 2026-04 Lichess dump. ~21 min Phase 1 + ~5.5 h Phase 2. Verify output JSON validates against schema + spot-check values against the previous stub. Capture run_id in scratch notes for the dump recipe (Phase F).
 - [ ] **T005** [USA, ⇐ T004] Unit tests at `packages/heuristics/tests/test_build_baselines.py`. Inject a `StaticAnalyzer` protocol so no real Stockfish needed. Coverage:
   - `_stream_filtered_games` against a 3-game in-memory zst fixture (one passing all filters, two failing different filters)
   - Reservoir determinism (same seed + same input → identical sample list)

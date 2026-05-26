@@ -76,3 +76,98 @@ The aggregator's bootstrap CI is seeded (`seed=0` by default; CLI
 exposes no seed override). Same engine fingerprint + same heuristic
 versions + same input PGN SHA256 = bit-identical score on the same
 CPU architecture. See FR-017.
+
+## Building rating_baselines.json (T007 v2 — Postgres-backed)
+
+`packages/heuristics/scripts/build_baselines.py` derives the seven
+`rating_baselines.json` buckets from a Lichess monthly export. Feature
+007 v2 (2026-05-26) persists every Stockfish analysis to Postgres as it
+completes, so a multi-hour run survives any single crash.
+
+### Prerequisites
+
+```bash
+# 1. Postgres up (feature 008 infrastructure)
+podman compose -f infra/docker/compose.yml up -d postgres
+
+# 2. Stockfish 16 container image
+podman build -t cleanmatch-stockfish:sf16 -f infra/docker/stockfish.Containerfile .
+
+# 3. Lichess monthly archive (NEVER commit — gitignored)
+curl -O https://database.lichess.org/standard/lichess_db_standard_rated_2026-04.pgn.zst
+
+# 4. Database URL exported
+export DATABASE_URL=postgresql+psycopg://cleanmatch:cleanmatch@localhost:5432/cleanmatch
+
+# 5. Schema up to date
+uv run alembic -c packages/analysis-core/alembic.ini upgrade head
+```
+
+### Fresh run
+
+```bash
+uv run python packages/heuristics/scripts/build_baselines.py \
+    --input-zst ./lichess_db_standard_rated_2026-04.pgn.zst \
+    --workers 6 \
+    --depth 10 \
+    --multipv 3 \
+    --seed 0 \
+    --per-bucket-sample 5000
+```
+
+The script INSERTs one `baseline_runs` row (status='running'), streams
+the 89M-game archive flushing reservoir state every 100k games, then
+spawns 6 workers that drain `baseline_samples` via `SELECT FOR UPDATE
+SKIP LOCKED`. ~21 min Phase 1 + ~5.5 h Phase 2 on a 6-core machine.
+
+### Resume after a crash
+
+```bash
+# Find the running/aborted run
+podman exec cleanmatch-postgres psql -U cleanmatch -d cleanmatch -c \
+  "SELECT id, status, total_scanned, total_sampled, total_analysed
+   FROM baseline_runs ORDER BY started_at DESC LIMIT 5"
+
+# Resume — Phase 1 skipped, workers re-claim pending or stale samples
+uv run python packages/heuristics/scripts/build_baselines.py \
+    --run-id <uuid-from-query>
+```
+
+Workers re-claim any sample whose `claimed_at` is older than 15 min and
+whose `analysed = FALSE`. No double work; trigger flips `analysed=TRUE`
+when a `baseline_analyses` row lands.
+
+### Inspecting progress
+
+```bash
+podman exec cleanmatch-postgres psql -U cleanmatch -d cleanmatch -c \
+  "SELECT status, total_scanned, total_sampled, total_analysed,
+          (NOW() - started_at) AS elapsed
+   FROM baseline_runs ORDER BY started_at DESC LIMIT 1"
+```
+
+### Production dump
+
+The run + its samples + analyses + the PGN corpus are dumpable for
+re-deployment without rerunning Stockfish:
+
+```bash
+pg_dump $DATABASE_URL \
+    --table=baseline_runs \
+    --table=baseline_samples \
+    --table=baseline_analyses \
+    --table=pgn_corpus \
+    -Fc -f "baselines-$(date -I).dump"
+```
+
+Restore on the target host:
+
+```bash
+createdb cleanmatch
+uv run alembic -c packages/analysis-core/alembic.ini upgrade head
+pg_restore --data-only -d $DATABASE_URL baselines-2026-05-26.dump
+```
+
+Then re-run the script with `--run-id` pointing at the restored row —
+or just SELECT from `baseline_buckets` to materialise
+`rating_baselines.json` without a script invocation.

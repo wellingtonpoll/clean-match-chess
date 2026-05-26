@@ -7,6 +7,10 @@ dependencies = [
     "pydantic>=2.7",
     "shared-types",
     "numpy>=2.0",
+    # build_baselines.py imports analysis_core.db for the Postgres-backed
+    # T007 v2 build (feature 007). Runtime audit code paths in heuristics
+    # do NOT use this — only the maintainer-side script does.
+    "analysis-core",
 ]
 
 [project.optional-dependencies]

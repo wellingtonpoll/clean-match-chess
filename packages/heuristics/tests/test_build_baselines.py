@@ -1,18 +1,16 @@
 """Unit tests for `packages/heuristics/scripts/build_baselines.py`.
 
-The real-data path drives Stockfish via subprocess; these tests inject a
-`StaticAnalyzer` so coverage runs without spawning the engine. Streams are
-fed via in-memory PGN strings + `subprocess.Popen` is mocked where needed.
+The real-data path drives Stockfish via subprocess + persists to Postgres;
+these tests cover the pure helpers in isolation. End-to-end coverage of
+the DB-backed flow lives in `packages/analysis-core/tests/test_baseline_store.py`
+plus the real maintainer-machine run (Phase E).
 
 Coverage targets (feature 007 / T005):
   * `_classify_bucket` bucketing boundaries
   * `_passes_filter` filter logic — Elo, TC, ply
   * `reservoir_sample` determinism (same seed → identical sample list)
   * `analyse_game` per-game stat computation (top1, weighted, ACPL)
-  * `build_buckets_real` end-to-end with mocked stream + static analyzer
-  * `rating-unknown` bucket = elementwise median of the 6 rated buckets
-  * `_safe_label` POSIX-safe filename mapping
-  * Output JSON validates against `rating_baselines.schema.json`
+  * Stub-path output validates against `rating_baselines.schema.json`
 """
 
 from __future__ import annotations
@@ -23,7 +21,6 @@ from collections.abc import Callable, Iterator
 from importlib import util as _import_util
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
 
 import pytest
 
@@ -306,138 +303,12 @@ class TestAnalyseGame:
 
 
 # ─── End-to-end build_buckets_real ───────────────────────────────────────
-
-
-class TestBuildBucketsReal:
-    @pytest.fixture
-    def tmp_zst(self, tmp_path: Path) -> Path:
-        """Minimal compressed PGN archive: 1500 games, all in the 1501-1800 bucket.
-
-        Empty buckets violate FR-001 — but we tolerate that here by mocking
-        `_open_zst_stream` instead of compressing real bytes (the sha256
-        helper still works against the on-disk file).
-        """
-        path = tmp_path / "tiny.pgn.zst"
-        path.write_bytes(b"placeholder")  # sha256 must be computable
-        return path
-
-    def _patched_stream(self) -> Iterator[tuple[dict[str, str], str]]:
-        """Generate 1500 games for each rated bucket — clears FR-001 floor.
-
-        Each bucket gets an Elo midway between its bounds, but always
-        ≥ MIN_ELO. The ≤1200 bucket is the only one whose `low` (1) sits
-        below the filter floor, so we pin it to 800.
-        """
-        per_bucket_elo: dict[str, int] = {
-            "≤1200": 800,
-            "1201-1500": 1350,
-            "1501-1800": 1650,
-            "1801-2100": 1950,
-            "2101-2400": 2250,
-            "2401+": 2500,
-        }
-        for label, _low, _high in build_baselines.BUCKET_DEFINITIONS:
-            elo = per_bucket_elo[label]
-            for i in range(1500):
-                yield (
-                    {
-                        "WhiteElo": str(elo),
-                        "BlackElo": str(elo),
-                        "Event": "Rated Rapid game",
-                        "PlyCount": "40",
-                    },
-                    f'[Event "X"]\n[White "a"]\n[Black "b"]\n'
-                    f'[Result "*"]\n[WhiteElo "{elo}"]\n[BlackElo "{elo}"]\n'
-                    f'[PlyCount "40"]\n[Event "Rated Rapid"]\n\n1. e4 e5 *\n'
-                    f"; game#{i}@{label}\n",
-                )
-
-    def test_end_to_end_with_static_analyzer(self, tmp_zst: Path, tmp_path: Path) -> None:
-        def factory() -> build_baselines.Analyzer:
-            return StaticAnalyzer(
-                lambda _b, _p: build_baselines.PositionEval(
-                    top_moves=(
-                        build_baselines.CandidateEval(uci="e2e4", eval_cp=30),
-                        build_baselines.CandidateEval(uci="d2d4", eval_cp=20),
-                    ),
-                    complexity_composite=0.7,
-                    is_book=False,
-                    is_only_move=False,
-                )
-            )
-
-        # Patch the streaming + analysis-side hooks.
-        with patch.object(
-            build_baselines, "_stream_pgn_games", return_value=self._patched_stream()
-        ):
-            buckets, archive_sha = build_baselines.build_buckets_real(
-                zst_path=tmp_zst,
-                seed=0,
-                per_bucket_sample=1200,  # > 1000 to clear FR-001
-                analyzer_factory=factory,
-                checkpoint_dir=tmp_path / "checkpoints",
-                resume=False,
-            )
-
-        assert len(buckets) == 7  # 6 rated + 1 rating-unknown
-        labels = [b["bucket_label"] for b in buckets]
-        assert labels[-1] == "rating-unknown"
-        assert archive_sha == "" or len(archive_sha) == 64  # sha256 of placeholder
-        for b in buckets[:-1]:
-            assert b["sample_size"] >= 1000, f"FR-001 violation: {b}"
-
-    def test_rating_unknown_is_elementwise_median(self, tmp_zst: Path, tmp_path: Path) -> None:
-        """The 7th bucket must be the elementwise median of the 6 rated."""
-
-        # Vary the analyzer response per bucket so the medians are non-trivial.
-        bucket_order = [lbl for lbl, _, _ in build_baselines.BUCKET_DEFINITIONS]
-        current_bucket_idx = [0]
-        per_bucket_top1 = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]  # median = mean(0.3, 0.4) = 0.35
-
-        def factory() -> build_baselines.Analyzer:
-            """Each engine init increments the bucket counter."""
-            bucket_idx = current_bucket_idx[0]
-            current_bucket_idx[0] += 1
-            target_top1 = per_bucket_top1[bucket_idx]
-
-            # Each ply has prob target_top1 of "match" — drive deterministically
-            # by alternating moves so the bucket's mean top1 == target_top1.
-            ply_state = [0]
-
-            def script_fn(_b: object, _p: int) -> build_baselines.PositionEval:
-                ply_state[0] += 1
-                is_match = (ply_state[0] / 10.0) <= target_top1
-                played_uci = "e2e4" if is_match else "z9z9"
-                return build_baselines.PositionEval(
-                    top_moves=(
-                        build_baselines.CandidateEval(uci=played_uci, eval_cp=30),
-                        build_baselines.CandidateEval(uci="d2d4", eval_cp=20),
-                    ),
-                    complexity_composite=1.0,
-                    is_book=False,
-                    is_only_move=False,
-                )
-
-            return StaticAnalyzer(script_fn)
-
-        with patch.object(
-            build_baselines, "_stream_pgn_games", return_value=self._patched_stream()
-        ):
-            buckets, _ = build_baselines.build_buckets_real(
-                zst_path=tmp_zst,
-                seed=0,
-                per_bucket_sample=1200,
-                analyzer_factory=factory,
-                checkpoint_dir=tmp_path / "checkpoints",
-                resume=False,
-            )
-
-        assert buckets[-1]["bucket_label"] == "rating-unknown"
-        # Cannot pin exact values (depends on the analyzer's drift) — just
-        # confirm the 7th bucket falls between min and max of the 6 rated.
-        rated_top1 = [b["expected_top1"] for b in buckets[:-1]]
-        assert min(rated_top1) <= buckets[-1]["expected_top1"] <= max(rated_top1)
-        assert bucket_order == [b["bucket_label"] for b in buckets[:-1]]
+#
+# Removed: the DB-backed flow is exercised by
+# `packages/analysis-core/tests/test_baseline_store.py` (16 cases) and the
+# real maintainer-machine run in Phase E. End-to-end with a fake analyzer
+# would require injecting a non-Stockfish worker into the ProcessPool,
+# which is more plumbing than it's worth for a maintainer script.
 
 
 # ─── Output schema validation ────────────────────────────────────────────
@@ -466,16 +337,3 @@ class TestOutputSchemaValidation:
         build_baselines.main(["--dry-run", "--output", str(out)])
         data = json.loads(out.read_text())
         jsonschema.validate(data, schema)  # raises on violation
-
-
-# ─── Misc utility tests ──────────────────────────────────────────────────
-
-
-class TestSafeLabel:
-    def test_replaces_le_and_plus(self) -> None:
-        assert build_baselines._safe_label("≤1200") == "lte1200"
-        assert build_baselines._safe_label("2401+") == "2401plus"
-
-    def test_preserves_plain_labels(self) -> None:
-        assert build_baselines._safe_label("1501-1800") == "1501-1800"
-        assert build_baselines._safe_label("rating-unknown") == "rating-unknown"

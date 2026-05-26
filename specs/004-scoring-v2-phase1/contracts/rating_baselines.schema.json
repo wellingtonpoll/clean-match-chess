@@ -76,14 +76,14 @@
           "expected_acpl_mean": {
             "type": "number",
             "minimum": 0.0,
-            "maximum": 500.0,
-            "description": "Expected mean of Average Centipawn Loss for this bucket."
+            "maximum": 1000.0,
+            "description": "Expected mean of Average Centipawn Loss for this bucket. Bound bumped 500 → 1000 on 2026-05-26 after the first real measured run (Lichess 2026-04, depth=10, multipv=3) found low-rated buckets exceeding the literature-based 500 ceiling because the out-of-multipv penalty (200 cp) applies to a large fraction of plies."
           },
           "expected_acpl_stdev": {
             "type": "number",
             "minimum": 0.0,
-            "maximum": 500.0,
-            "description": "Expected population standard deviation of ACPL for this bucket. Used to scale the acpl-analysis suspicion value."
+            "maximum": 1000.0,
+            "description": "Expected population standard deviation of ACPL for this bucket. Used to scale the acpl-analysis suspicion value. Bound bumped 500 → 1000 on 2026-05-26 (same justification as expected_acpl_mean)."
           },
           "sample_size": {
             "type": "integer",

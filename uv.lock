@@ -565,6 +565,7 @@ name = "heuristics"
 version = "0.1.0"
 source = { editable = "packages/heuristics" }
 dependencies = [
+    { name = "analysis-core" },
     { name = "numpy" },
     { name = "pydantic" },
     { name = "shared-types" },
@@ -582,6 +583,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
+    { name = "analysis-core", editable = "packages/analysis-core" },
     { name = "jsonschema", marker = "extra == 'dev'", specifier = ">=4.17,<5" },
     { name = "numpy", specifier = ">=2.0" },
     { name = "pydantic", specifier = ">=2.7" },

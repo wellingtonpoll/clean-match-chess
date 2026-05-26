@@ -1,31 +1,46 @@
 """One-shot maintainer script — derive `rating_baselines.json` from Lichess open database.
 
-Reproducible: pinned dataset month + deterministic seed. Output is the artifact
-committed under `packages/heuristics/data/rating_baselines.json`; this script
-is NOT invoked at audit time.
+Postgres-backed (feature 007 T007 v2): every analysis result is persisted to
+`baseline_analyses` the moment it completes. Reservoir state flushes to
+`baseline_samples` every N games scanned during Phase 1. A crash anywhere
+loses at most ~one in-flight analysis or ~one flush window, never the
+whole multi-hour run. Output is the same `rating_baselines.json` artifact
+committed under `packages/heuristics/data/`; this script is NOT invoked
+at audit time.
 
 Methodology (per spec FR-011 + feature 007 research.md R1-R8):
-  1. Stream a Lichess month-export archive (.pgn.zst) via `zstd -d -c` subprocess
-     (no full decompress to disk — archive is ~170 GB decompressed).
-  2. Filter games: both players Elo in [600, 3500], TC ∈ {RAPID, CLASSICAL},
+  1. INSERT a `baseline_runs` row (status='running') with the full parameter
+     set + archive sha256 + engine binary sha256.
+  2. Stream a Lichess month-export archive (.pgn.zst) via `zstd -d -c`
+     subprocess (no full decompress to disk — archive is ~170 GB
+     decompressed).
+  3. Filter games: both players Elo in [600, 3500], TC ∈ {RAPID, CLASSICAL},
      ≥ 20 plies.
-  3. Bin by min(WhiteElo, BlackElo) into 6 rating buckets.
-  4. Reservoir-sample N games per bucket (Algorithm L, seeded RNG).
-  5. Run Stockfish depth 12 multipv 3 over sampled positions.
-  6. Compute per-bucket: mean+stdev of per-game top1 rate, weighted-top1 rate,
-     and ACPL. Add the 7th `rating-unknown` bucket as the elementwise median
-     of the 6 rated buckets.
-  7. Emit JSON conforming to contracts/rating_baselines.schema.json.
+  4. Bin by min(WhiteElo, BlackElo) into 6 rating buckets.
+  5. Reservoir-sample N games per bucket (Algorithm L, seeded RNG). Flush
+     pgn_corpus + baseline_samples to Postgres every `--flush-every` games.
+  6. Spawn a ProcessPoolExecutor of `--workers` Stockfish-bound workers.
+     Each worker loops: claim sample (SELECT FOR UPDATE SKIP LOCKED) →
+     analyse with Stockfish depth N multipv 3 → INSERT baseline_analyses.
+  7. SELECT from the `baseline_buckets` view to fetch the 6 rated bucket
+     aggregates. Compute the 7th `rating-unknown` row as the elementwise
+     median in Python.
+  8. Emit JSON conforming to contracts/rating_baselines.schema.json + mark
+     the run row status='completed'.
 
-Runtime: ~6 h on a 6-core reference machine. Use --dry-run for code review
-without running the engine.
+Runtime: ~6 h on a 6-core reference machine for 30000 analyses. Use
+--dry-run for code review without running the engine.
 
 Usage:
     python build_baselines.py --dry-run
     python build_baselines.py \\
         --input-zst ./lichess_db_standard_rated_2026-04.pgn.zst \\
         --stockfish-cmd "podman run --rm -i cleanmatch-stockfish:sf16" \\
-        --seed 0 --depth 12 --workers 6 --per-bucket-sample 5000
+        --seed 0 --depth 10 --workers 6 --per-bucket-sample 5000
+
+    # Resume an existing run after a crash (skip Phase 1, jump straight to
+    # worker claim loop):
+    python build_baselines.py --run-id <uuid>
 """
 
 from __future__ import annotations
@@ -36,13 +51,16 @@ import hashlib
 import io
 import json
 import multiprocessing as mp
+import os
 import random
 import re
 import statistics
 import subprocess
 import sys
 import time
-from collections.abc import Callable, Iterator
+import traceback
+import uuid
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -55,10 +73,15 @@ DEFAULT_SEED = 0
 DEFAULT_OUTPUT = Path(__file__).resolve().parents[1] / "data" / "rating_baselines.json"
 DEFAULT_INPUT_ZST = Path.cwd() / f"lichess_db_standard_rated_{DEFAULT_MONTH}.pgn.zst"
 DEFAULT_STOCKFISH_CMD = "podman run --rm -i cleanmatch-stockfish:sf16"
-DEFAULT_CHECKPOINT_DIR = Path("/tmp/baselines-007")  # noqa: S108 — maintainer script; predictable path is intentional
 DEFAULT_PER_BUCKET_SAMPLE = 5000
-DEFAULT_DEPTH = 12
+DEFAULT_DEPTH = 10
+DEFAULT_MULTIPV = 3
 DEFAULT_WORKERS = 6
+DEFAULT_FLUSH_EVERY = 100_000  # Phase 1 reservoir flush interval (games scanned).
+DEFAULT_STALE_CLAIM_MIN = 15  # Worker claim TTL before another worker may take over.
+
+# Bumped when the methodology changes (engine version, depth, multipv, formula).
+SCRIPT_VERSION = "0.2.0"
 
 BUCKET_DEFINITIONS: tuple[tuple[str, int | None, int | None], ...] = (
     ("≤1200", 1, 1200),
@@ -405,52 +428,70 @@ def reservoir_sample(
     return buckets
 
 
-# ─── Checkpoint persistence ───────────────────────────────────────────────
+# ─── DB-backed reservoir flush ────────────────────────────────────────────
 
 
-def write_checkpoints(samples: dict[str, list[str]], checkpoint_dir: Path) -> None:
-    """Write one PGN file per bucket to `checkpoint_dir/{label}.sample.pgn`.
+@dataclass
+class _ReservoirSlot:
+    """In-memory mirror of one (bucket, position) row in baseline_samples.
 
-    Filenames replace `≤` with `lte` and `+` with `plus` so paths are POSIX-safe.
+    `last_persisted_sha256` lets us compute the per-flush diff cheaply:
+    only positions whose current `pgn_sha256` differs from what's in the DB
+    need an UPSERT. None means "never persisted yet".
     """
-    checkpoint_dir.mkdir(parents=True, exist_ok=True)
-    for label, pgns in samples.items():
-        path = checkpoint_dir / f"{_safe_label(label)}.sample.pgn"
-        path.write_text("\n\n".join(pgns) + "\n", encoding="utf-8")
-        print(f"[checkpoint] wrote {path} ({len(pgns):,} games)", file=sys.stderr)
+
+    bucket_label: str
+    reservoir_position: int
+    pgn_sha256: bytes
+    pgn_text: str
+    white_elo: int | None
+    black_elo: int | None
+    time_control: str | None
+    ply_count: int | None
+    last_persisted_sha256: bytes | None = None
 
 
-def read_checkpoints(checkpoint_dir: Path) -> dict[str, list[str]]:
-    """Read previously-written per-bucket checkpoints back into memory."""
-    import chess.pgn
+def _flush_diff_to_db(
+    session_factory: object,
+    *,
+    run_id: uuid.UUID,
+    slots_by_bucket: dict[str, list[_ReservoirSlot]],
+    total_scanned: int,
+) -> int:
+    """Upsert any reservoir slot whose pgn changed since the last flush.
 
-    out: dict[str, list[str]] = {}
-    for label, _, _ in BUCKET_DEFINITIONS:
-        path = checkpoint_dir / f"{_safe_label(label)}.sample.pgn"
-        if not path.exists():
-            out[label] = []
-            continue
-        text = path.read_text(encoding="utf-8")
-        # Split on the blank-line PGN separator. `chess.pgn.read_game` over a
-        # StringIO would be slower; the explicit split is sufficient here.
-        games = [seg.strip() for seg in text.split("\n\n\n") if seg.strip()]
-        # Some writers emit only "\n\n" between games. Coalesce: if the split
-        # yielded one giant blob, re-parse via chess.pgn.
-        if len(games) <= 1 and text.count("[Event ") > 1:
-            stream = io.StringIO(text)
-            games = []
-            while True:
-                g = chess.pgn.read_game(stream)
-                if g is None:
-                    break
-                games.append(str(g))
-        out[label] = games
-        print(f"[checkpoint] read {path} ({len(games):,} games)", file=sys.stderr)
-    return out
+    Returns the number of slots that needed persisting (zero means a no-op
+    flush — the call still updates `total_scanned` in baseline_runs).
+    """
+    from analysis_core.db.baseline_store import ReservoirSlot, flush_reservoir
 
+    diff: list[ReservoirSlot] = []
+    dirty_local: list[_ReservoirSlot] = []
+    for slots in slots_by_bucket.values():
+        for s in slots:
+            if s.pgn_sha256 == s.last_persisted_sha256:
+                continue
+            diff.append(
+                ReservoirSlot(
+                    bucket_label=s.bucket_label,
+                    reservoir_position=s.reservoir_position,
+                    pgn_sha256=s.pgn_sha256,
+                    pgn_text=s.pgn_text,
+                    white_elo=s.white_elo,
+                    black_elo=s.black_elo,
+                    time_control=s.time_control,
+                    ply_count=s.ply_count,
+                )
+            )
+            dirty_local.append(s)
 
-def _safe_label(label: str) -> str:
-    return label.replace("≤", "lte").replace("+", "plus")
+    with session_factory() as session:  # type: ignore[misc]
+        with session.begin():
+            flush_reservoir(session, run_id=run_id, slots=diff, total_scanned=total_scanned)
+    # Only mark slots persisted after a successful commit.
+    for s in dirty_local:
+        s.last_persisted_sha256 = s.pgn_sha256
+    return len(diff)
 
 
 # ─── Analysis (Phase 2 of the two-phase build) ────────────────────────────
@@ -523,138 +564,196 @@ def analyse_game(pgn_text: str, analyzer: Analyzer) -> GameStats:
     )
 
 
-# ─── Process-pool workers (real-engine parallel path) ────────────────────
+# ─── Process-pool workers (DB-backed claim-loop) ─────────────────────────
 #
 # Each worker process owns one Stockfish subprocess for its entire lifetime
-# (Stockfish startup is too expensive to do per-task). The pool initialiser
-# stores the analyzer in module-level globals — the executor's pickle path
-# never needs to serialise the engine itself, only the small `(label, pgn)`
-# work items.
+# AND one SQLAlchemy session factory (also per-process). The worker loops:
+#   1. Claim sample via `SELECT ... FOR UPDATE SKIP LOCKED` + UPDATE claimed_at.
+#   2. Run Stockfish (~30 s; no DB connections held).
+#   3. INSERT into baseline_analyses. The trigger flips samples.analysed = TRUE.
+# Stops when claim_sample returns None.
 
-_WORKER_ANALYZER: Analyzer | None = None
+_WORKER_ANALYZER: StockfishAnalyzer | None = None
 
 
-def _worker_init(stockfish_cmd: str, depth: int) -> None:
+def _worker_close() -> None:
+    """atexit handler — close the Stockfish subprocess cleanly.
+
+    Prevents the podman-engine container leaks that hung Phase 2 in T007 v1.
+    """
+    global _WORKER_ANALYZER
+    if _WORKER_ANALYZER is not None:
+        try:
+            _WORKER_ANALYZER.close()
+        except Exception as e:
+            print(f"[worker] cleanup error: {e}", file=sys.stderr)
+        _WORKER_ANALYZER = None
+
+
+def _worker_init(stockfish_cmd: str, depth: int, database_url: str) -> None:
+    """ProcessPoolExecutor initializer — runs once per worker process.
+
+    Initialises the analyzer + the DB engine + registers the cleanup hook.
+    """
+    import atexit
+
+    from analysis_core.db.session import init_engine
+
     global _WORKER_ANALYZER
     _WORKER_ANALYZER = StockfishAnalyzer(stockfish_cmd, depth=depth)
+    atexit.register(_worker_close)
+    init_engine(database_url)
 
 
-def _worker_analyse(work: tuple[str, str]) -> tuple[str, GameStats]:
-    """Worker task: analyse one (label, pgn_text) pair. Runs in a subprocess."""
-    label, pgn = work
+@dataclass
+class _WorkerResult:
+    """Summary returned by one worker after the claim loop drains."""
+
+    completed: int = 0
+    errors: int = 0
+
+
+def _worker_claim_loop(run_id_str: str, stale_threshold_min: int) -> _WorkerResult:
+    """Worker entry point — loop until no more pending samples."""
+    from analysis_core.db.baseline_store import (
+        ClaimedSample,
+        claim_sample,
+        persist_analysis,
+    )
+    from analysis_core.db.session import get_session_factory
+
     if _WORKER_ANALYZER is None:
-        raise RuntimeError("worker not initialised — call _worker_init first")
-    return label, analyse_game(pgn, _WORKER_ANALYZER)
+        raise RuntimeError("worker not initialised — _worker_init was not called")
+    factory = get_session_factory()
+    if factory is None:
+        raise RuntimeError("DB engine not initialised in worker — DATABASE_URL missing")
+
+    run_id = uuid.UUID(run_id_str)
+    result = _WorkerResult()
+    while True:
+        # Tx 1: atomic claim
+        claimed: ClaimedSample | None
+        with factory() as session:
+            with session.begin():
+                claimed = claim_sample(
+                    session,
+                    run_id=run_id,
+                    stale_threshold_minutes=stale_threshold_min,
+                )
+        if claimed is None:
+            break
+
+        # Stockfish (~30 s) — no DB connection held
+        t0 = time.perf_counter()
+        stats: GameStats | None = None
+        error_message: str | None = None
+        try:
+            stats = analyse_game(claimed.pgn_text, _WORKER_ANALYZER)
+        except Exception as e:
+            error_message = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"[:4000]
+            result.errors += 1
+        duration_ms = int((time.perf_counter() - t0) * 1000)
+
+        # Tx 2: persist
+        with factory() as session:
+            with session.begin():
+                persist_analysis(
+                    session,
+                    sample_id=claimed.sample_id,
+                    top1_rate=stats.top1_rate if stats else 0.0,
+                    weighted_rate=stats.weighted_rate if stats else 0.0,
+                    acpl=stats.acpl if stats else 0.0,
+                    eligible_plies=stats.eligible_plies if stats else 0,
+                    analysis_duration_ms=duration_ms,
+                    error_message=error_message,
+                )
+        result.completed += 1
+    return result
 
 
-def analyse_samples_parallel(
-    samples: dict[str, list[str]],
+def analyse_samples_against_db(
     *,
+    run_id: uuid.UUID,
     stockfish_cmd: str,
     depth: int,
     workers: int,
-    progress_every: int = 100,
-) -> dict[str, BucketStats]:
-    """Parallel engine analysis using a `ProcessPoolExecutor`.
+    database_url: str,
+    stale_threshold_min: int = DEFAULT_STALE_CLAIM_MIN,
+    progress_every_sec: float = 30.0,
+) -> tuple[int, int]:
+    """Spawn `workers` ProcessPool workers; each drains pending samples.
 
-    Each worker spawns its own Stockfish process (one engine per worker, kept
-    alive for the worker's full lifetime). Used for the real T007 run on a
-    multi-core maintainer machine. The single-engine `analyse_samples` path
-    is kept for tests and the `workers=1` fallback (avoids subprocess +
-    pickle overhead on tiny inputs).
+    Returns `(total_completed, total_errors)`. Progress is logged from the
+    parent process by polling the DB (workers can't share stdout cleanly).
     """
-    # Build per-bucket stats containers up front so we can stream results in.
-    out: dict[str, BucketStats] = {}
-    for label, low, high in BUCKET_DEFINITIONS:
-        out[label] = BucketStats(label=label, rating_low=low, rating_high=high)
+    from analysis_core.db.session import get_session_factory
 
-    # Flatten work list — order doesn't matter to the per-bucket aggregator.
-    work: list[tuple[str, str]] = [
-        (label, pgn) for label, pgns in samples.items() for pgn in pgns
-    ]
-    total = len(work)
     print(
-        f"[analyse] starting {workers} workers over {total:,} games (depth={depth})",
+        f"[analyse] starting {workers} workers against run {run_id} (depth={depth})",
         file=sys.stderr,
     )
+    ctx = mp.get_context("spawn")
+    completed_total = 0
+    errors_total = 0
     start = time.time()
+    last_print = start
+    factory = get_session_factory()
+    assert factory is not None, "parent process must have DB engine initialised"
 
-    ctx = mp.get_context("spawn")  # clean subprocess state; safer than fork w/ subprocess engines
-    completed = 0
     with concurrent.futures.ProcessPoolExecutor(
         max_workers=workers,
         mp_context=ctx,
         initializer=_worker_init,
-        initargs=(stockfish_cmd, depth),
+        initargs=(stockfish_cmd, depth, database_url),
     ) as pool:
-        for label, game_stats in pool.map(_worker_analyse, work, chunksize=4):
-            if game_stats.eligible_plies > 0:
-                out[label].games.append(game_stats)
-            completed += 1
-            if completed % progress_every == 0:
-                elapsed = time.time() - start
-                rate = completed / elapsed if elapsed > 0 else 0.0
-                eta = (total - completed) / rate if rate > 0 else float("inf")
+        futures = [
+            pool.submit(_worker_claim_loop, str(run_id), stale_threshold_min)
+            for _ in range(workers)
+        ]
+        while not all(f.done() for f in futures):
+            now = time.time()
+            if now - last_print >= progress_every_sec:
+                _, total_analysed = _poll_progress(factory, run_id)
+                elapsed = now - start
+                rate = total_analysed / elapsed if elapsed > 0 else 0.0
                 print(
-                    f"[analyse] {completed:,}/{total:,} ({rate:.1f}/s, "
-                    f"ETA {eta / 60:.1f}min)",
+                    f"[analyse] analysed={total_analysed:,} rate={rate:.2f}/s "
+                    f"elapsed={elapsed / 60:.1f}min",
                     file=sys.stderr,
                 )
+                last_print = now
+            time.sleep(2)
+
+        for f in concurrent.futures.as_completed(futures):
+            try:
+                wr = f.result()
+                completed_total += wr.completed
+                errors_total += wr.errors
+            except Exception as e:
+                print(f"[analyse] worker crashed: {e}", file=sys.stderr)
+                errors_total += 1
 
     elapsed = time.time() - start
     print(
-        f"[analyse] DONE — {completed:,} games in {elapsed / 60:.1f}min "
-        f"({completed / elapsed:.1f}/s)",
+        f"[analyse] DONE — completed={completed_total:,} errors={errors_total} "
+        f"in {elapsed / 60:.1f}min",
         file=sys.stderr,
     )
-    return out
+    return completed_total, errors_total
 
 
-def analyse_samples(
-    samples: dict[str, list[str]],
-    analyzer_factory: Callable[[], Analyzer],
-    *,
-    progress_every: int = 50,
-) -> dict[str, BucketStats]:
-    """Run engine analysis over the sampled checkpoints, per bucket.
+def _poll_progress(session_factory: object, run_id: uuid.UUID) -> tuple[int, int]:
+    """Return `(total_sampled, total_analysed)` from baseline_runs."""
+    from sqlalchemy import text
 
-    Single-process, single-engine — multi-worker parallelism is left to a
-    future revision; the current bottleneck is Stockfish CPU, not Python
-    overhead. The `analyzer_factory` parameter exists so the caller can
-    spawn one engine per worker if parallelising later.
-    """
-    out: dict[str, BucketStats] = {}
-    analyzer = analyzer_factory()
-    try:
-        for label, _, _ in BUCKET_DEFINITIONS:
-            low = next(rng[1] for rng in BUCKET_DEFINITIONS if rng[0] == label)
-            high = next(rng[2] for rng in BUCKET_DEFINITIONS if rng[0] == label)
-            stats = BucketStats(label=label, rating_low=low, rating_high=high)
-            pgns = samples.get(label, [])
-            start = time.time()
-            for idx, pgn in enumerate(pgns):
-                game_stats = analyse_game(pgn, analyzer)
-                if game_stats.eligible_plies > 0:
-                    stats.games.append(game_stats)
-                if (idx + 1) % progress_every == 0:
-                    elapsed = time.time() - start
-                    rate = (idx + 1) / elapsed if elapsed > 0 else 0
-                    print(
-                        f"[analyse:{label}] {idx + 1:,}/{len(pgns):,} games ({rate:.1f}/s)",
-                        file=sys.stderr,
-                    )
-            print(
-                f"[analyse:{label}] DONE — {len(stats.games):,} games analysed",
-                file=sys.stderr,
-            )
-            out[label] = stats
-    finally:
-        # Best-effort cleanup. Subprocess analyzers close on context exit;
-        # static analyzers ignore close().
-        close = getattr(analyzer, "close", None)
-        if callable(close):
-            close()
-    return out
+    with session_factory() as session:  # type: ignore[misc]
+        row = session.execute(
+            text("SELECT total_sampled, total_analysed FROM baseline_runs WHERE id = :id"),
+            {"id": run_id},
+        ).first()
+        if row is None:
+            return 0, 0
+        return int(row.total_sampled or 0), int(row.total_analysed or 0)
 
 
 # ─── StockfishAnalyzer — real engine path ─────────────────────────────────
@@ -761,107 +860,283 @@ class StockfishAnalyzer:
 # ─── Bucket assembly ──────────────────────────────────────────────────────
 
 
-def build_buckets_real(
+_RATING_BOUNDS: dict[str, tuple[int | None, int | None]] = {
+    label: (low, high) for label, low, high in BUCKET_DEFINITIONS
+}
+
+
+def _stream_with_db_flush(
     *,
+    session_factory: object,
+    run_id: uuid.UUID,
     zst_path: Path,
     seed: int,
     per_bucket_sample: int,
-    analyzer_factory: Callable[[], Analyzer],
-    checkpoint_dir: Path,
-    resume: bool,
-    parallel_workers: int = 1,
-    parallel_stockfish_cmd: str | None = None,
-    parallel_depth: int = DEFAULT_DEPTH,
-) -> tuple[list[dict[str, object]], str]:
-    """Real-data baseline build. Two-phase: stream + sample, then analyse.
+    flush_every: int,
+) -> int:
+    """Phase 1 — stream + reservoir + periodic DB flush. Returns total_sampled.
 
-    The Stockfish depth + command for the parallel path are accepted as
-    explicit parameters (rather than re-derived from `analyzer_factory`)
-    because the `ProcessPoolExecutor` initializer needs picklable args —
-    closures captured by the factory are not portable across workers. When
-    ``parallel_workers <= 1`` the sequential `analyse_samples` path runs
-    with the supplied factory, preserving the test-injection seam.
-
-    Returns:
-        (buckets, archive_sha256). The sha256 is computed once at start so
-        the `source_dataset` label can quote it for reproducibility.
+    Reuses Algorithm L from `reservoir_sample()` but yields control to the
+    DB every `flush_every` games scanned. Reservoir state is mirrored in
+    `_ReservoirSlot` instances so we can flush only the per-position diff.
     """
-    archive_sha = _sha256_of(zst_path)
-    print(f"[setup] archive sha256: {archive_sha}", file=sys.stderr)
-
-    # Phase 1: stream + sample (or restore from checkpoint).
-    if resume and any(
-        (checkpoint_dir / f"{_safe_label(lbl)}.sample.pgn").exists()
-        for lbl, _, _ in BUCKET_DEFINITIONS
-    ):
-        print(f"[setup] resuming from checkpoint dir {checkpoint_dir}", file=sys.stderr)
-        samples = read_checkpoints(checkpoint_dir)
-    else:
-        print(f"[setup] streaming + sampling from {zst_path}", file=sys.stderr)
-        samples = reservoir_sample(
-            _stream_pgn_games(zst_path),
-            per_bucket_sample=per_bucket_sample,
-            seed=seed,
-        )
-        write_checkpoints(samples, checkpoint_dir)
-
-    # FR-001: enforce per-bucket floor.
-    deficient: list[tuple[str, int]] = [
-        (label, len(samples.get(label, [])))
+    slots_by_bucket: dict[str, list[_ReservoirSlot]] = {
+        label: [] for label, _, _ in BUCKET_DEFINITIONS
+    }
+    rngs: dict[str, random.Random] = {
+        label: random.Random((seed << 16) ^ hash(label))  # noqa: S311 — sampling, not crypto
         for label, _, _ in BUCKET_DEFINITIONS
-        if len(samples.get(label, [])) < 1000
+    }
+    seen: dict[str, int] = {label: 0 for label, _, _ in BUCKET_DEFINITIONS}
+    total_seen = 0
+    start = time.time()
+
+    for headers, pgn_text in _stream_pgn_games(zst_path):
+        total_seen += 1
+
+        ply_header = headers.get("PlyCount")
+        if ply_header is not None:
+            try:
+                move_count = int(ply_header)
+            except ValueError:
+                move_count = pgn_text.count("{ [%clk")
+        else:
+            move_count = pgn_text.count("{ [%clk")
+
+        label = _passes_filter(headers, move_count)
+        if label is None:
+            if total_seen % flush_every == 0:
+                _flush_diff_to_db(
+                    session_factory,
+                    run_id=run_id,
+                    slots_by_bucket=slots_by_bucket,
+                    total_scanned=total_seen,
+                )
+                _log_phase1_progress(total_seen, slots_by_bucket, start)
+            continue
+
+        seen[label] += 1
+        rng = rngs[label]
+        bucket = slots_by_bucket[label]
+
+        white_elo, black_elo, time_control, ply_count = _extract_headers(headers, move_count)
+        pgn_bytes = pgn_text.encode("utf-8")
+        pgn_sha = hashlib.sha256(pgn_bytes).digest()
+
+        if len(bucket) < per_bucket_sample:
+            bucket.append(
+                _ReservoirSlot(
+                    bucket_label=label,
+                    reservoir_position=len(bucket),
+                    pgn_sha256=pgn_sha,
+                    pgn_text=pgn_text,
+                    white_elo=white_elo,
+                    black_elo=black_elo,
+                    time_control=time_control,
+                    ply_count=ply_count,
+                )
+            )
+        else:
+            idx = rng.randint(0, seen[label] - 1)
+            if idx < per_bucket_sample:
+                slot = bucket[idx]
+                slot.pgn_sha256 = pgn_sha
+                slot.pgn_text = pgn_text
+                slot.white_elo = white_elo
+                slot.black_elo = black_elo
+                slot.time_control = time_control
+                slot.ply_count = ply_count
+
+        if total_seen % flush_every == 0:
+            _flush_diff_to_db(
+                session_factory,
+                run_id=run_id,
+                slots_by_bucket=slots_by_bucket,
+                total_scanned=total_seen,
+            )
+            _log_phase1_progress(total_seen, slots_by_bucket, start)
+
+    # Final flush at end of stream.
+    _flush_diff_to_db(
+        session_factory,
+        run_id=run_id,
+        slots_by_bucket=slots_by_bucket,
+        total_scanned=total_seen,
+    )
+    _log_phase1_progress(total_seen, slots_by_bucket, start, final=True)
+    return sum(len(s) for s in slots_by_bucket.values())
+
+
+def _extract_headers(
+    headers: dict[str, str], move_count: int
+) -> tuple[int | None, int | None, str | None, int | None]:
+    """Parse the columns we want to persist in baseline_samples."""
+
+    def _int_or_none(s: str | None) -> int | None:
+        if s is None:
+            return None
+        try:
+            return int(s)
+        except ValueError:
+            return None
+
+    white = _int_or_none(headers.get("WhiteElo"))
+    black = _int_or_none(headers.get("BlackElo"))
+    tc = headers.get("TimeControl")
+    if tc is not None and len(tc) > 32:
+        tc = tc[:32]
+    return white, black, tc, move_count
+
+
+def _log_phase1_progress(
+    total_seen: int,
+    slots_by_bucket: dict[str, list[_ReservoirSlot]],
+    start: float,
+    *,
+    final: bool = False,
+) -> None:
+    elapsed = time.time() - start
+    rate = total_seen / elapsed if elapsed > 0 else 0.0
+    fills = " ".join(f"{lbl}={len(slots)}" for lbl, slots in slots_by_bucket.items())
+    tag = "DONE" if final else "stream"
+    print(
+        f"[{tag}] scanned={total_seen:,} rate={rate:,.0f}/s elapsed={elapsed:.0f}s fills: {fills}",
+        file=sys.stderr,
+    )
+
+
+def build_buckets_real(
+    *,
+    session_factory: object,
+    run_id: uuid.UUID,
+    zst_path: Path,
+    seed: int,
+    per_bucket_sample: int,
+    stockfish_cmd: str,
+    depth: int,
+    workers: int,
+    database_url: str,
+    flush_every: int = DEFAULT_FLUSH_EVERY,
+    skip_phase1: bool = False,
+) -> tuple[list[dict[str, object]], str]:
+    """DB-backed baseline build. Phase 1 (stream + flush) → Phase 2 (workers).
+
+    `session_factory` is the SQLAlchemy session factory (parent process).
+    `run_id` was created upstream via `baseline_store.create_run()` — this
+    function only updates progress on it; it does NOT mark the run
+    completed (caller does that after writing the JSON, so failures here
+    leave the row in 'running' for resume).
+    """
+    from analysis_core.db.baseline_store import (
+        fetch_bucket_aggregates,
+        mark_phase1_done,
+    )
+    from sqlalchemy import text
+
+    archive_sha = _sha256_of(zst_path) if zst_path.exists() else ""
+    if archive_sha:
+        print(f"[setup] archive sha256: {archive_sha}", file=sys.stderr)
+
+    # ─── Phase 1: stream + reservoir + periodic flush ───
+    if skip_phase1:
+        print(
+            f"[phase1] skipped (resume mode) — using existing samples for run {run_id}",
+            file=sys.stderr,
+        )
+        with session_factory() as session:  # type: ignore[misc]
+            total_sampled = session.execute(
+                text("SELECT total_sampled FROM baseline_runs WHERE id = :id"),
+                {"id": run_id},
+            ).scalar_one()
+        if total_sampled is None:
+            raise SystemExit(
+                f"--run-id {run_id} has no Phase 1 result — cannot resume Phase 2 alone"
+            )
+    else:
+        total_sampled = _stream_with_db_flush(
+            session_factory=session_factory,
+            run_id=run_id,
+            zst_path=zst_path,
+            seed=seed,
+            per_bucket_sample=per_bucket_sample,
+            flush_every=flush_every,
+        )
+        with session_factory() as session:  # type: ignore[misc]
+            with session.begin():
+                mark_phase1_done(session, run_id=run_id, total_sampled=total_sampled)
+
+    # FR-001: enforce per-bucket floor BEFORE running 6h of analysis.
+    with session_factory() as session:  # type: ignore[misc]
+        rows = session.execute(
+            text(
+                "SELECT bucket_label, COUNT(*) AS n FROM baseline_samples "
+                "WHERE run_id = :id GROUP BY bucket_label"
+            ),
+            {"id": run_id},
+        ).all()
+    fills = {row.bucket_label: int(row.n) for row in rows}
+    deficient = [
+        (lbl, fills.get(lbl, 0)) for lbl, _, _ in BUCKET_DEFINITIONS if fills.get(lbl, 0) < 1000
     ]
     if deficient:
-        msg = "; ".join(f"{lbl} only has {n} samples (floor=1000)" for lbl, n in deficient)
-        raise SystemExit(f"FR-001 violation — insufficient samples after streaming: {msg}")
+        msg = "; ".join(f"{lbl}={n} (floor=1000)" for lbl, n in deficient)
+        raise SystemExit(f"FR-001 violation — insufficient samples after Phase 1: {msg}")
 
-    # Phase 2: engine analysis per bucket.
-    if parallel_workers > 1 and parallel_stockfish_cmd is not None:
-        stats_by_bucket = analyse_samples_parallel(
-            samples,
-            stockfish_cmd=parallel_stockfish_cmd,
-            depth=parallel_depth,
-            workers=parallel_workers,
+    # ─── Phase 2: workers drain pending samples via claim loop ───
+    analyse_samples_against_db(
+        run_id=run_id,
+        stockfish_cmd=stockfish_cmd,
+        depth=depth,
+        workers=workers,
+        database_url=database_url,
+    )
+
+    # ─── Phase 3: aggregate from view + compute rating-unknown ───
+    with session_factory() as session:  # type: ignore[misc]
+        aggs = fetch_bucket_aggregates(session, run_id=run_id)
+
+    from analysis_core.db.baseline_store import compute_rating_unknown_row
+
+    if len(aggs) != 6:
+        raise SystemExit(
+            f"Expected 6 rated buckets from baseline_buckets view, got {len(aggs)}: "
+            + ", ".join(a.bucket_label for a in aggs)
         )
-    else:
-        stats_by_bucket = analyse_samples(samples, analyzer_factory)
+    aggs_sorted: list[object] = []
+    for label, _, _ in BUCKET_DEFINITIONS:
+        match = next((a for a in aggs if a.bucket_label == label), None)
+        if match is None:
+            raise SystemExit(f"View missing bucket '{label}' — aborting")
+        aggs_sorted.append(match)
+    unknown = compute_rating_unknown_row(aggs_sorted)  # type: ignore[arg-type]
 
-    # Assemble 6 rated + 1 rating-unknown (elementwise median).
-    rated: list[BucketStats] = [stats_by_bucket[label] for label, _, _ in BUCKET_DEFINITIONS]
-    buckets: list[dict[str, object]] = [
-        {
-            "bucket_label": s.label,
-            "rating_low": s.rating_low,
-            "rating_high": s.rating_high,
-            "expected_top1": round(s.expected_top1(), 4),
-            "expected_weighted_top1": round(s.expected_weighted_top1(), 4),
-            "expected_acpl_mean": round(s.expected_acpl_mean(), 2),
-            "expected_acpl_stdev": round(s.expected_acpl_stdev(), 2),
-            "sample_size": s.sample_size(),
-        }
-        for s in rated
-    ]
-
-    # 7th bucket: rating-unknown as elementwise median of the 6 rated buckets.
+    buckets: list[dict[str, object]] = []
+    for a in aggs_sorted:  # type: ignore[assignment]
+        low, high = _RATING_BOUNDS[a.bucket_label]
+        buckets.append(
+            {
+                "bucket_label": a.bucket_label,
+                "rating_low": low,
+                "rating_high": high,
+                "expected_top1": round(a.expected_top1, 4),
+                "expected_weighted_top1": round(a.expected_weighted_top1, 4),
+                "expected_acpl_mean": round(a.expected_acpl_mean, 2),
+                "expected_acpl_stdev": round(a.expected_acpl_stdev, 2),
+                "sample_size": int(a.sample_size),
+            }
+        )
     buckets.append(
         {
             "bucket_label": "rating-unknown",
             "rating_low": None,
             "rating_high": None,
-            "expected_top1": round(statistics.median(s.expected_top1() for s in rated), 4),
-            "expected_weighted_top1": round(
-                statistics.median(s.expected_weighted_top1() for s in rated), 4
-            ),
-            "expected_acpl_mean": round(
-                statistics.median(s.expected_acpl_mean() for s in rated), 2
-            ),
-            "expected_acpl_stdev": round(
-                statistics.median(s.expected_acpl_stdev() for s in rated), 2
-            ),
-            "sample_size": min(s.sample_size() for s in rated),
+            "expected_top1": round(unknown.expected_top1, 4),
+            "expected_weighted_top1": round(unknown.expected_weighted_top1, 4),
+            "expected_acpl_mean": round(unknown.expected_acpl_mean, 2),
+            "expected_acpl_stdev": round(unknown.expected_acpl_stdev, 2),
+            "sample_size": int(unknown.sample_size),
         }
     )
-
     return buckets, archive_sha
 
 
@@ -874,6 +1149,22 @@ def _sha256_of(path: Path) -> str:
     return h.hexdigest()
 
 
+def _sha256_of_engine_binary(stockfish_cmd: str) -> bytes:
+    """Best-effort sha256 of the local Stockfish binary; falls back to a sentinel."""
+    parts = stockfish_cmd.split()
+    candidate: Path | None = None
+    if parts and not parts[0].startswith(("podman", "docker")):
+        candidate = Path(parts[0])
+    if candidate is not None and candidate.exists():
+        h = hashlib.sha256()
+        with candidate.open("rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+        return h.digest()
+    # Container path: hash the command string as a stable placeholder.
+    return hashlib.sha256(stockfish_cmd.encode("utf-8")).digest()
+
+
 # ─── CLI ──────────────────────────────────────────────────────────────────
 
 
@@ -882,7 +1173,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument(
         "--dry-run",
         action="store_true",
-        help="Emit hand-curated stub values (no archive + no engine). Phase 1 fallback.",
+        help="Emit hand-curated stub values (no archive + no engine + no DB).",
     )
     p.add_argument("--seed", type=int, default=DEFAULT_SEED, help="Reservoir-sampling seed.")
     p.add_argument(
@@ -910,10 +1201,16 @@ def main(argv: list[str] | None = None) -> int:
         help=f"Stockfish depth. Default: {DEFAULT_DEPTH}.",
     )
     p.add_argument(
+        "--multipv",
+        type=int,
+        default=DEFAULT_MULTIPV,
+        help=f"Stockfish multipv. Default: {DEFAULT_MULTIPV}.",
+    )
+    p.add_argument(
         "--workers",
         type=int,
         default=DEFAULT_WORKERS,
-        help="(Reserved for future parallelism — currently single-engine.)",
+        help=f"Number of parallel Stockfish workers. Default: {DEFAULT_WORKERS}.",
     )
     p.add_argument(
         "--per-bucket-sample",
@@ -922,10 +1219,22 @@ def main(argv: list[str] | None = None) -> int:
         help=f"Reservoir sample size per bucket. Default: {DEFAULT_PER_BUCKET_SAMPLE}.",
     )
     p.add_argument(
-        "--resume-from",
-        type=Path,
-        default=DEFAULT_CHECKPOINT_DIR,
-        help=f"Checkpoint dir for Phase-2 restart. Default: {DEFAULT_CHECKPOINT_DIR}",
+        "--flush-every",
+        type=int,
+        default=DEFAULT_FLUSH_EVERY,
+        help=f"Phase-1 reservoir flush interval (games scanned). Default: {DEFAULT_FLUSH_EVERY}.",
+    )
+    p.add_argument(
+        "--run-id",
+        type=str,
+        default=None,
+        help="Resume a previously-started run by UUID (skips Phase 1).",
+    )
+    p.add_argument(
+        "--notes",
+        type=str,
+        default=None,
+        help="Optional free-text notes recorded in baseline_runs.notes.",
     )
     p.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = p.parse_args(argv)
@@ -933,35 +1242,117 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         buckets = build_buckets_stub()
         source = "hand-curated-stub (Phase 1 fallback; lit. values, not measured)"
+        _write_output(args.output, source, buckets)
+        return 0
+
+    from analysis_core.db.baseline_store import (
+        create_run,
+        mark_run_completed,
+        mark_run_failed,
+    )
+    from analysis_core.db.session import get_session_factory, init_engine
+
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        raise SystemExit(
+            "DATABASE_URL not set — baseline build requires a running Postgres. "
+            "Start `podman compose -f infra/docker/compose.yml up -d postgres` and "
+            "export DATABASE_URL. See README.md for the connection string."
+        )
+
+    init_engine(database_url)
+    factory = get_session_factory()
+    if factory is None:
+        raise SystemExit("Failed to initialise DB engine — check DATABASE_URL + Postgres health.")
+
+    if args.run_id:
+        run_id = uuid.UUID(args.run_id)
+        archive_sha = ""
+        skip_phase1 = True
+        print(f"[setup] resuming run {run_id} (skipping Phase 1)", file=sys.stderr)
     else:
+        skip_phase1 = False
+        if not args.input_zst.exists():
+            raise SystemExit(f"Input archive not found: {args.input_zst}")
+        archive_sha_hex = _sha256_of(args.input_zst)
+        archive_sha = archive_sha_hex
+        engine_sha = _sha256_of_engine_binary(args.stockfish_cmd)
+        with factory() as session:
+            with session.begin():
+                run_id = create_run(
+                    session,
+                    archive_sha256=bytes.fromhex(archive_sha_hex),
+                    source_dataset=f"lichess_db_standard_rated_{args.month}",
+                    seed=args.seed,
+                    per_bucket_sample=args.per_bucket_sample,
+                    depth=args.depth,
+                    multipv=args.multipv,
+                    workers=args.workers,
+                    engine_binary_sha256=engine_sha,
+                    script_version=SCRIPT_VERSION,
+                    notes=args.notes,
+                )
+        print(f"[setup] run_id={run_id}", file=sys.stderr)
 
-        def _factory() -> Analyzer:
-            return StockfishAnalyzer(args.stockfish_cmd, depth=args.depth)
-
-        buckets, archive_sha = build_buckets_real(
+    try:
+        buckets, archive_sha_final = build_buckets_real(
+            session_factory=factory,
+            run_id=run_id,
             zst_path=args.input_zst,
             seed=args.seed,
             per_bucket_sample=args.per_bucket_sample,
-            analyzer_factory=_factory,
-            checkpoint_dir=args.resume_from,
-            resume=True,
-            parallel_workers=args.workers,
-            parallel_stockfish_cmd=args.stockfish_cmd,
-            parallel_depth=args.depth,
+            stockfish_cmd=args.stockfish_cmd,
+            depth=args.depth,
+            workers=args.workers,
+            database_url=database_url,
+            flush_every=args.flush_every,
+            skip_phase1=skip_phase1,
         )
-        source = f"lichess_db_standard_rated_{args.month} (sha256={archive_sha})"
+    except KeyboardInterrupt:
+        with factory() as session:
+            with session.begin():
+                mark_run_failed(
+                    session,
+                    run_id=run_id,
+                    error_message="SIGINT — user aborted",
+                    status="aborted",
+                )
+        print(f"[abort] marked run {run_id} aborted", file=sys.stderr)
+        raise
+    except Exception as e:
+        with factory() as session:
+            with session.begin():
+                mark_run_failed(
+                    session,
+                    run_id=run_id,
+                    error_message=f"{type(e).__name__}: {e}"[:4000],
+                    status="failed",
+                )
+        print(f"[fail] marked run {run_id} failed: {e}", file=sys.stderr)
+        raise
 
+    with factory() as session:
+        with session.begin():
+            mark_run_completed(session, run_id=run_id)
+
+    source = (
+        f"lichess_db_standard_rated_{args.month} "
+        f"(sha256={archive_sha or archive_sha_final}, run_id={run_id})"
+    )
+    _write_output(args.output, source, buckets)
+    return 0
+
+
+def _write_output(out_path: Path, source: str, buckets: list[dict[str, object]]) -> None:
     payload = {
         "version": "2.0.0",
         "generated_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source_dataset": source,
         "buckets": buckets,
     }
-
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
-    print(f"Wrote {args.output} ({len(buckets)} buckets, source={source})")
-    return 0
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
+    print(f"Wrote {out_path} ({len(buckets)} buckets, source={source})")
 
 
 if __name__ == "__main__":
