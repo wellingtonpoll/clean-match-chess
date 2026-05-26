@@ -3,6 +3,7 @@
 import { GameRow } from '../components/GameRow'
 import { Header } from '../components/Header'
 import { ProfileLockup } from '../components/ProfileLockup'
+import { WorkerBanner } from '../components/WorkerBanner'
 import type { Session } from '../lib/AnalysisContext'
 import { useAnalysisContext } from '../lib/AnalysisContext'
 
@@ -48,6 +49,7 @@ export default function HomePage() {
     isAnalyzing,
     activeUsername,
     runAnalysis,
+    workerHealth,
   } = useAnalysisContext()
 
   const totalOffset = sessions.reduce((acc, s) => acc + s.games.length, 0)
@@ -69,6 +71,7 @@ export default function HomePage() {
       }}
     >
       <Header />
+      {!workerHealth.alive && <WorkerBanner queued={workerHealth.queued} />}
       <main
         style={{
           maxWidth: '64rem',

@@ -85,6 +85,13 @@ def session_factory(migrated_db: str) -> Iterator[sessionmaker[Session]]:
 
 @pytest.fixture(autouse=True)
 def clean_audit_jobs(migrated_db: str) -> Iterator[None]:
+    """Truncate audit_jobs between tests.
+
+    NOTE: these tests assume no `audit_worker.py` daemon is consuming the
+    queue concurrently. If a worker is running locally, kill it first
+    (`pkill -f audit_worker.py`) or pause it for the duration of pytest.
+    CI does not run the worker, so this is only a local-dev concern.
+    """
     engine = create_engine(migrated_db)
     try:
         with engine.begin() as conn:
