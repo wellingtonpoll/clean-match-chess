@@ -82,3 +82,68 @@ def test_time_control_parsed() -> None:
     assert game.time_control.base_seconds == 180
     assert game.time_control.increment_seconds == 2
     assert game.time_control.category is TimeControlCategory.BLITZ
+
+
+# ─── Per-move clock extraction (feature 011, FR-001 / FR-002) ─────────
+
+
+def test_no_clock_annotations_leaves_time_spent_none() -> None:
+    pgn = (
+        '[Event "?"]\n[White "a"]\n[Black "b"]\n[Result "*"]\n[TimeControl "600+0"]\n\n'
+        "1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O *\n"
+    )
+    game = load_pgn_text(pgn)
+    assert all(m.time_spent_ms is None for m in game.moves)
+
+
+def test_clock_annotations_populate_time_spent_no_increment() -> None:
+    """10-min game, no increment. First move uses 5 s; clock 600 → 595."""
+    pgn = (
+        '[Event "?"]\n[White "a"]\n[Black "b"]\n[Result "*"]\n[TimeControl "600+0"]\n\n'
+        "1. e4 {[%clk 0:09:55]} e5 {[%clk 0:09:58]} "
+        "2. Nf3 {[%clk 0:09:50]} Nc6 {[%clk 0:09:54]} *\n"
+    )
+    game = load_pgn_text(pgn)
+    times = [m.time_spent_ms for m in game.moves]
+    # ply 0 = white e4, prior=600000, current=595000, inc=0 → 5000 ms
+    assert times[0] == 5000
+    # ply 1 = black e5, prior=600000, current=598000, inc=0 → 2000 ms
+    assert times[1] == 2000
+    # ply 2 = white Nf3, prior=595000, current=590000 → 5000 ms
+    assert times[2] == 5000
+    # ply 3 = black Nc6, prior=598000, current=594000 → 4000 ms
+    assert times[3] == 4000
+
+
+def test_clock_annotations_with_increment() -> None:
+    """600+5: clock displayed AFTER increment credit. Used 8 s for first move."""
+    pgn = (
+        '[Event "?"]\n[White "a"]\n[Black "b"]\n[Result "*"]\n[TimeControl "600+5"]\n\n'
+        "1. e4 {[%clk 0:09:57]} e5 {[%clk 0:09:57]} *\n"
+    )
+    game = load_pgn_text(pgn)
+    # ply 0: prior=600_000, current=597_000, inc=5_000 → 8_000 ms thinking.
+    assert game.moves[0].time_spent_ms == 8000
+    # ply 1: same math for black.
+    assert game.moves[1].time_spent_ms == 8000
+
+
+def test_clock_clamps_to_zero_on_negative_delta() -> None:
+    """If clock somehow INCREASES across moves (corrupted PGN), clamp to 0."""
+    pgn = (
+        '[Event "?"]\n[White "a"]\n[Black "b"]\n[Result "*"]\n[TimeControl "600+0"]\n\n'
+        "1. e4 {[%clk 0:11:00]} *\n"  # clock magically gained 60s
+    )
+    game = load_pgn_text(pgn)
+    assert game.moves[0].time_spent_ms == 0
+
+
+def test_lichess_eval_annotation_doesnt_block_clock() -> None:
+    """Lichess sometimes adds [%eval] before [%clk]; we must still parse the clock."""
+    pgn = (
+        '[Event "?"]\n[White "a"]\n[Black "b"]\n[Result "*"]\n[TimeControl "180+1"]\n\n'
+        "1. e4 {[%eval 0.23] [%clk 0:02:58]} *\n"
+    )
+    game = load_pgn_text(pgn)
+    # prior 180000 → current 178000, inc 1000 → 3000 ms
+    assert game.moves[0].time_spent_ms == 3000
