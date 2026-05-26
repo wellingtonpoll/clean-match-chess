@@ -60,6 +60,90 @@ function generateId(): string {
   return Math.random().toString(36).slice(2, 10)
 }
 
+interface PollJobInput {
+  idx: number
+  job_id: string
+  headers?: Record<string, string>
+  ply_count?: number
+}
+
+interface AuditStatusResponse {
+  job_id: string
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'aborted' | 'not_found'
+  result: {
+    run_id?: string
+    score?: number
+    risk_level?: RiskLevel
+    confidence_interval?: [number, number]
+    dominant_signals?: string[]
+    headers?: Record<string, string>
+    ply_count?: number
+  } | null
+  error: string | null
+}
+
+/**
+ * Poll `/api/audit/[job_id]` with linear backoff (1s → 2s → 4s, cap 4s)
+ * until the job reaches a terminal state, then patch the corresponding
+ * game row in the session.
+ */
+async function pollJob(
+  job: PollJobInput,
+  sessionId: string,
+  setSessions: React.Dispatch<React.SetStateAction<Session[]>>,
+  abortSignal: AbortSignal,
+): Promise<void> {
+  const delays = [1000, 2000, 4000]
+  let attempt = 0
+  while (!abortSignal.aborted) {
+    const res = await fetch(`/api/audit/${job.job_id}`, { signal: abortSignal })
+    const data = (await res.json()) as AuditStatusResponse
+
+    if (data.status === 'completed' && data.result) {
+      const updated: GameResult = {
+        idx: job.idx,
+        status: 'done',
+        runId: data.result.run_id,
+        score: data.result.score,
+        riskLevel: data.result.risk_level,
+        confidenceInterval: data.result.confidence_interval,
+        dominantSignals: data.result.dominant_signals,
+        headers: data.result.headers ?? job.headers,
+        plyCount: data.result.ply_count ?? job.ply_count,
+      }
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId
+            ? { ...s, games: s.games.map((g) => (g.idx === job.idx ? updated : g)) }
+            : s
+        )
+      )
+      return
+    }
+
+    if (data.status === 'failed' || data.status === 'aborted' || data.status === 'not_found') {
+      const errored: GameResult = {
+        idx: job.idx,
+        status: 'error',
+        error: data.error ?? data.status,
+        headers: job.headers,
+      }
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId
+            ? { ...s, games: s.games.map((g) => (g.idx === job.idx ? errored : g)) }
+            : s
+        )
+      )
+      return
+    }
+
+    const delay = delays[Math.min(attempt, delays.length - 1)]
+    attempt++
+    await new Promise((r) => setTimeout(r, delay))
+  }
+}
+
 export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   const [username, setUsername] = useState('')
   const [platform, setPlatform] = useState<Platform>('chesscom')
@@ -128,13 +212,11 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
       const effectiveUsername = (opts?.newUsername ?? username).trim()
       if (!effectiveUsername) return
 
-      // Sync the override back into the context state so the Header
-      // search field reflects what is being analyzed.
       if (opts?.newUsername !== undefined && opts.newUsername !== username) {
         setUsername(opts.newUsername)
       }
 
-      // Abort any previous stream.
+      // Abort any previous in-flight poll cycle.
       abortRef.current?.abort()
       const abort = new AbortController()
       abortRef.current = abort
@@ -143,10 +225,6 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
       if (offset === 0) {
         setActiveUsername(effectiveUsername)
         setSessions([])
-        // Fire the profile fetch in parallel with the SSE stream. The hero
-        // section subscribes to `profile` / `profileStatus` and swaps the
-        // default HorseLabs lockup for the searched-player lockup as soon
-        // as this resolves.
         void fetchProfile(effectiveUsername, platform)
       }
 
@@ -159,109 +237,93 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
           : [...prev, { id: sessionId, offset, games: initialGames, done: false }]
       )
 
-      const params = new URLSearchParams({
-        username: effectiveUsername,
-        platform,
-        count: String(GAMES_PER_PAGE),
-        offset: String(offset),
-      })
-
+      // Feature 011 Phase 4 — async audit queue. POST to enqueue all games,
+      // get back a list of job_ids, poll each until terminal. Replaces the
+      // previous /api/analyze SSE stream which spawned Stockfish in-process
+      // per audit.
       try {
-        const res = await fetch(`/api/analyze?${params}`, { signal: abort.signal })
+        const enqueueRes = await fetch('/api/audit-username', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: effectiveUsername,
+            platform,
+            count: GAMES_PER_PAGE,
+            offset,
+          }),
+          signal: abort.signal,
+        })
 
-        if (!res.ok) {
-          const errText = await res.text()
+        if (!enqueueRes.ok) {
+          const body = (await enqueueRes.json().catch(() => ({}))) as { error?: string }
           setSessions((prev) =>
-            prev.map((s) => (s.id === sessionId ? { ...s, done: true, error: errText } : s))
+            prev.map((s) =>
+              s.id === sessionId
+                ? { ...s, done: true, error: body.error ?? `HTTP ${enqueueRes.status}` }
+                : s
+            )
           )
           return
         }
 
-        const reader = res.body?.getReader()
-        if (!reader) return
-
-        const decoder = new TextDecoder()
-        let partial = ''
-
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-
-          partial += decoder.decode(value, { stream: true })
-          const lines = partial.split('\n')
-          partial = lines.pop() || ''
-
-          for (const line of lines) {
-            const trimmed = line.trim()
-            if (!trimmed.startsWith('data:')) continue
-            const jsonStr = trimmed.slice(5).trim()
-            if (!jsonStr) continue
-
-            let payload: Record<string, unknown>
-            try {
-              payload = JSON.parse(jsonStr)
-            } catch {
-              continue
-            }
-
-            if (payload.done) {
-              setSessions((prev) =>
-                prev.map((s) => (s.id === sessionId ? { ...s, done: true } : s))
-              )
-              break
-            }
-
-            if (payload.error && payload.idx === undefined) {
-              setSessions((prev) =>
-                prev.map((s) =>
-                  s.id === sessionId
-                    ? {
-                        ...s,
-                        done: true,
-                        error: String(payload.error),
-                        games: s.games.map((g) => ({
-                          ...g,
-                          status: 'error' as const,
-                          error: String(payload.error),
-                        })),
-                      }
-                    : s
-                )
-              )
-              break
-            }
-
-            const idx = payload.idx as number
-            const updatedGame: GameResult = payload.error
-              ? {
-                  idx,
-                  status: 'error',
-                  error: String(payload.error),
-                  headers: payload.headers as Record<string, string> | undefined,
-                }
-              : {
-                  idx,
-                  status: 'done',
-                  runId: payload.run_id as string | undefined,
-                  score: payload.score as number | undefined,
-                  riskLevel: payload.risk_level as RiskLevel | undefined,
-                  confidenceInterval: payload.confidence_interval as
-                    | [number, number]
-                    | undefined,
-                  dominantSignals: payload.dominant_signals as string[] | undefined,
-                  headers: payload.headers as Record<string, string> | undefined,
-                  plyCount: payload.ply_count as number | undefined,
-                }
-
-            setSessions((prev) =>
-              prev.map((s) => {
-                if (s.id !== sessionId) return s
-                const games = s.games.map((g) => (g.idx === idx ? updatedGame : g))
-                return { ...s, games }
-              })
-            )
-          }
+        const { jobs } = (await enqueueRes.json()) as {
+          jobs: Array<{
+            idx: number
+            job_id?: string
+            error?: string
+            headers?: Record<string, string>
+            ply_count?: number
+          }>
         }
+
+        // Immediate updates: render headers + mark errored-at-enqueue games.
+        setSessions((prev) =>
+          prev.map((s) => {
+            if (s.id !== sessionId) return s
+            const games = s.games.map((g) => {
+              const job = jobs.find((j) => j.idx === g.idx)
+              if (!job) return g
+              if (job.error) {
+                return {
+                  idx: g.idx,
+                  status: 'error' as const,
+                  error: job.error,
+                  headers: job.headers,
+                } satisfies GameResult
+              }
+              return {
+                idx: g.idx,
+                status: 'pending' as const,
+                headers: job.headers,
+                plyCount: job.ply_count,
+              } satisfies GameResult
+            })
+            return { ...s, games }
+          })
+        )
+
+        const pollable = jobs.filter((j) => j.job_id) as Array<{
+          idx: number
+          job_id: string
+          headers?: Record<string, string>
+          ply_count?: number
+        }>
+        if (pollable.length === 0) {
+          setSessions((prev) =>
+            prev.map((s) => (s.id === sessionId ? { ...s, done: true } : s))
+          )
+          return
+        }
+
+        // Poll each job in parallel. Each game's status updates as it
+        // finishes; once all reach terminal, mark the session done.
+        await Promise.all(
+          pollable.map((job) => pollJob(job, sessionId, setSessions, abort.signal))
+        )
+
+        setSessions((prev) =>
+          prev.map((s) => (s.id === sessionId ? { ...s, done: true } : s))
+        )
       } catch (e) {
         if ((e as Error).name === 'AbortError') return
         setSessions((prev) =>
