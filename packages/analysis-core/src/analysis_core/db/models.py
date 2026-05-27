@@ -367,3 +367,50 @@ class AuditJobModel(Base):
     claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ChesscomCrawlStatusModel(Base):
+    """One row per chess.com username visited by the corpus crawler (feature 013).
+
+    Persists the BFS state of `scripts/build_engine_assisted_corpus.py` so
+    interrupted runs resume idempotently. `status` is the verbatim chess.com
+    pub-API `status` field (e.g. `closed:fair_play_violations`, `basic`).
+    """
+
+    __tablename__ = "chesscom_crawl_status"
+    __table_args__ = (
+        CheckConstraint(
+            "depth_from_seed >= 0",
+            name="chesscom_crawl_status_depth_nonneg",
+        ),
+        CheckConstraint(
+            "games_pulled >= 0",
+            name="chesscom_crawl_status_games_nonneg",
+        ),
+        Index(
+            "idx_chesscom_crawl_banned",
+            "depth_from_seed",
+            postgresql_where=text("status LIKE 'closed:fair_play%'"),
+        ),
+        Index(
+            "idx_chesscom_crawl_seed_depth",
+            "seed_username",
+            "depth_from_seed",
+        ),
+    )
+
+    username: Mapped[str] = mapped_column(String(64), primary_key=True)
+    status: Mapped[str] = mapped_column(String(64), nullable=False)
+    depth_from_seed: Mapped[int] = mapped_column(Integer, nullable=False)
+    seed_username: Mapped[str] = mapped_column(String(64), nullable=False)
+    checked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    games_pulled: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        server_default=text("0"),
+    )
+    profile_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
