@@ -242,3 +242,18 @@ def test_is_fair_play_banned_returns_none_on_404(httpx_mock, sleep_recorder) -> 
     httpx_mock.add_response(method="GET", url=_profile_url("ghost"), status_code=404)
     with ChesscomClient(sleep=sleep) as client:
         assert client.is_fair_play_banned("ghost") is None
+
+
+def test_get_player_profile_lowercases_username(httpx_mock, sleep_recorder) -> None:
+    """chess.com 301-redirects non-canonical case; lowercase before the request."""
+    _, sleep = sleep_recorder
+    # Only register the lowercased URL — non-lowercased would fail to match.
+    httpx_mock.add_response(
+        method="GET",
+        url=_profile_url("mixed_case_user"),
+        json={"username": "mixed_case_user", "status": "basic"},
+    )
+    with ChesscomClient(sleep=sleep) as client:
+        profile = client.get_player_profile("MIXED_Case_User")
+    assert profile is not None
+    assert profile["status"] == "basic"

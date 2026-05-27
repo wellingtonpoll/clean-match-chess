@@ -103,12 +103,17 @@ class ChesscomClient:
         crawler. Other fields (player_id, followers, country, last_online,
         league) are kept verbatim for caller use.
 
+        chess.com's URL routing is case-insensitive but redirects via 301
+        from any non-canonical form to all-lowercase. Lowercase before the
+        request so we never hit the redirect (httpx doesn't auto-follow by
+        default + the redirect adds a wasted API call).
+
         404 (account does not exist) returns None — distinct from a transient
         upstream error, which still raises `ChesscomError`.
         """
         if not username:
             raise ValueError("username must be non-empty")
-        url = f"/pub/player/{username}"
+        url = f"/pub/player/{username.lower()}"
         # Inline HTTP call so we can distinguish 404 cleanly. Reuses the
         # same retry / backoff schedule as `_get_json` for 429 / 5xx.
         for attempt, backoff in enumerate(BACKOFF_SCHEDULE_SECONDS):
@@ -147,7 +152,8 @@ class ChesscomClient:
         return status.startswith("closed:fair_play")
 
     def _fetch_archives(self, username: str) -> list[str]:
-        url = f"/pub/player/{username}/games/archives"
+        # Lowercase username — chess.com 301-redirects non-canonical case.
+        url = f"/pub/player/{username.lower()}/games/archives"
         payload = self._get_json(url)
         archives_raw = payload.get("archives")
         if not isinstance(archives_raw, list):
