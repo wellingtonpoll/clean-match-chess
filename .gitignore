@@ -60,3 +60,9 @@ lichess_db_standard_rated_*.pgn.zst
 
 # Phase-1 sampling checkpoints from feature 007 build pass (legacy pickle path)
 /tmp/baselines-007/
+
+# Feature 013 — engine-assisted corpus crawled from chess.com banned accounts.
+# PGNs contain third-party opponent usernames; kept local-only to avoid
+# creating a searchable "suspected cheaters + their opponents" artifact.
+tests/fixtures/corpora/engine_assisted/*.pgn
+tests/fixtures/corpora/engine_assisted/*.provenance.json

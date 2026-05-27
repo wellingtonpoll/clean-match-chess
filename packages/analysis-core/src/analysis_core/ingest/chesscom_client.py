@@ -95,6 +95,57 @@ class ChesscomClient:
                     return out
         return out
 
+    def get_player_profile(self, username: str) -> dict[str, object] | None:
+        """Return the `/pub/player/{username}` JSON payload, or None on 404.
+
+        Feature 013: the `status` field of this payload reveals fair-play
+        bans. Used by `is_fair_play_banned()` to build a labeled corpus
+        crawler. Other fields (player_id, followers, country, last_online,
+        league) are kept verbatim for caller use.
+
+        404 (account does not exist) returns None — distinct from a transient
+        upstream error, which still raises `ChesscomError`.
+        """
+        if not username:
+            raise ValueError("username must be non-empty")
+        url = f"/pub/player/{username}"
+        # Inline HTTP call so we can distinguish 404 cleanly. Reuses the
+        # same retry / backoff schedule as `_get_json` for 429 / 5xx.
+        for attempt, backoff in enumerate(BACKOFF_SCHEDULE_SECONDS):
+            response = self._client.get(url)
+            if response.status_code == httpx.codes.OK:
+                data = response.json()
+                if not isinstance(data, dict):
+                    raise ChesscomError(f"expected JSON object from {url}")
+                return data
+            if response.status_code == httpx.codes.NOT_FOUND:
+                return None
+            if response.status_code in {429, 500, 502, 503, 504}:
+                if attempt >= MAX_RETRIES:
+                    raise ChesscomError(
+                        f"chess.com returned {response.status_code} for {url} "
+                        f"after {attempt} retries"
+                    )
+                self._sleep(backoff)  # type: ignore[operator]
+                continue
+            raise ChesscomError(f"chess.com returned {response.status_code} for {url}")
+        raise ChesscomError(f"exhausted retries for {url}")
+
+    def is_fair_play_banned(self, username: str) -> bool | None:
+        """True iff `/pub/player/{username}` `status` starts with `closed:fair_play`.
+
+        Returns None when the account doesn't exist (404). Callers in the
+        crawler treat None and False the same — only True triggers PGN
+        ingest.
+        """
+        profile = self.get_player_profile(username)
+        if profile is None:
+            return None
+        status = profile.get("status")
+        if not isinstance(status, str):
+            return False
+        return status.startswith("closed:fair_play")
+
     def _fetch_archives(self, username: str) -> list[str]:
         url = f"/pub/player/{username}/games/archives"
         payload = self._get_json(url)

@@ -150,3 +150,95 @@ def test_4xx_other_than_429_raises_immediately(httpx_mock, sleep_recorder) -> No
     httpx_mock.add_response(method="GET", url=_archives_url(), status_code=404)
     with ChesscomClient(sleep=sleep) as client, pytest.raises(ChesscomError, match="404"):
         client.fetch_recent_games("alice", count=1)
+
+
+# ── Feature 013: get_player_profile + is_fair_play_banned ─────────────
+
+
+def _profile_url(username: str = "alice") -> str:
+    return f"https://api.chess.com/pub/player/{username}"
+
+
+def test_get_player_profile_returns_payload(httpx_mock, sleep_recorder) -> None:
+    _, sleep = sleep_recorder
+    httpx_mock.add_response(
+        method="GET",
+        url=_profile_url("quaiada"),
+        json={
+            "player_id": 89132312,
+            "username": "quaiada",
+            "status": "closed:fair_play_violations",
+            "country": "https://api.chess.com/pub/country/BR",
+        },
+    )
+    with ChesscomClient(sleep=sleep) as client:
+        profile = client.get_player_profile("quaiada")
+    assert profile is not None
+    assert profile["status"] == "closed:fair_play_violations"
+    assert profile["player_id"] == 89132312
+
+
+def test_get_player_profile_returns_none_on_404(httpx_mock, sleep_recorder) -> None:
+    _, sleep = sleep_recorder
+    httpx_mock.add_response(method="GET", url=_profile_url("ghost"), status_code=404)
+    with ChesscomClient(sleep=sleep) as client:
+        assert client.get_player_profile("ghost") is None
+
+
+def test_get_player_profile_rejects_empty_username() -> None:
+    with ChesscomClient() as client, pytest.raises(ValueError, match="non-empty"):
+        client.get_player_profile("")
+
+
+def test_get_player_profile_retries_on_429(httpx_mock, sleep_recorder) -> None:
+    calls, sleep = sleep_recorder
+    httpx_mock.add_response(method="GET", url=_profile_url("rate"), status_code=429)
+    httpx_mock.add_response(
+        method="GET", url=_profile_url("rate"), json={"username": "rate", "status": "basic"}
+    )
+    with ChesscomClient(sleep=sleep) as client:
+        profile = client.get_player_profile("rate")
+    assert profile is not None
+    assert profile["status"] == "basic"
+    assert calls == [BACKOFF_SCHEDULE_SECONDS[0]]
+
+
+def test_is_fair_play_banned_true(httpx_mock, sleep_recorder) -> None:
+    _, sleep = sleep_recorder
+    httpx_mock.add_response(
+        method="GET",
+        url=_profile_url("cheater"),
+        json={"username": "cheater", "status": "closed:fair_play_violations"},
+    )
+    with ChesscomClient(sleep=sleep) as client:
+        assert client.is_fair_play_banned("cheater") is True
+
+
+def test_is_fair_play_banned_false_for_active_account(httpx_mock, sleep_recorder) -> None:
+    _, sleep = sleep_recorder
+    httpx_mock.add_response(
+        method="GET",
+        url=_profile_url("clean_user"),
+        json={"username": "clean_user", "status": "basic"},
+    )
+    with ChesscomClient(sleep=sleep) as client:
+        assert client.is_fair_play_banned("clean_user") is False
+
+
+def test_is_fair_play_banned_false_for_other_closed(httpx_mock, sleep_recorder) -> None:
+    """closed:abuse / closed:tos are different categories — only fair_play counts."""
+    _, sleep = sleep_recorder
+    httpx_mock.add_response(
+        method="GET",
+        url=_profile_url("abusive"),
+        json={"username": "abusive", "status": "closed:abuse"},
+    )
+    with ChesscomClient(sleep=sleep) as client:
+        assert client.is_fair_play_banned("abusive") is False
+
+
+def test_is_fair_play_banned_returns_none_on_404(httpx_mock, sleep_recorder) -> None:
+    _, sleep = sleep_recorder
+    httpx_mock.add_response(method="GET", url=_profile_url("ghost"), status_code=404)
+    with ChesscomClient(sleep=sleep) as client:
+        assert client.is_fair_play_banned("ghost") is None
